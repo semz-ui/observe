@@ -19,21 +19,25 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
-    # Phase 2+ will need Postgres for e2e tests — uncomment then:
-    # services:
-    #   postgres:
-    #     image: postgres:16
-    #     env:
-    #       POSTGRES_USER: observe
-    #       POSTGRES_PASSWORD: observe
-    #       POSTGRES_DB: observe
-    #     ports:
-    #       - 5433:5432
-    #     options: >-
-    #       --health-cmd pg_isready
-    #       --health-interval 10s
-    #       --health-timeout 5s
-    #       --health-retries 5
+    env:
+      # Points at the postgres service container below — its port 5432 is
+      # published on the runner's localhost as 5433, matching local dev.
+      DATABASE_URL: postgresql://observe:observe@localhost:5433/observe
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: observe
+          POSTGRES_PASSWORD: observe
+          POSTGRES_DB: observe
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +54,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate
+
+      - name: Apply database migrations
+        run: pnpm exec prisma migrate deploy
 
       - name: Lint
         run: pnpm exec eslint "{src,test}/**/*.ts"

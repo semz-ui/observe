@@ -1,0 +1,46 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Project {
+  id        String   @id @default(uuid(7))
+  name      String
+  // SHA-256 hex digest of the key — plaintext is shown once at creation and
+  // never stored. Lookups hash the incoming key first. (Deterministic hash,
+  // not bcrypt: per-row salts would break lookup-by-key.)
+  apiKey    String   @unique @map("api_key")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  events Event[]
+
+  @@map("projects")
+}
+
+model Event {
+  id              String   @id @default(uuid(7))
+  projectId       String   @map("project_id")
+  anonymousId     String   @map("anonymous_id")
+  sessionId       String   @map("session_id")
+  url             String
+  pageTitle       String?  @map("page_title")
+  elementTag      String   @map("element_tag")
+  elementId       String?  @map("element_id")
+  elementText     String?  @map("element_text")
+  elementSelector String   @map("element_selector")
+  elementHref     String?  @map("element_href")
+  // client-side click time — distinct from the server receive time below
+  timestamp       DateTime @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId, timestamp])
+  @@map("events")
+}

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: observe-db
+    environment:
+      POSTGRES_USER: observe
+      POSTGRES_PASSWORD: observe
+      POSTGRES_DB: observe
+    ports:
+      # 5433 on the host — local Homebrew Postgres owns 5432
+      - '5433:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U observe -d observe']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - observe-pgdata:/var/lib/postgresql/data
+
+volumes:
+  observe-pgdata:

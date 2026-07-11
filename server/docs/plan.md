@@ -49,18 +49,23 @@ or from node_modules frameworks.
 
 ---
 
-## Phase 2 — Database
+## Phase 2 — Database ✅ (done 2026-07-11)
 
 **Goal:** real persistence infrastructure, still behind the domain contracts.
 
-- [ ] `docker-compose.yml` with Postgres 16 on **5433** (Homebrew Postgres owns 5432)
-- [ ] Prisma installed in `server/`; `schema.prisma` with `Project` + `Event`
-      models mirroring the domain entities
-- [ ] First migration created and applied
-- [ ] `PrismaService` in `src/shared/` (connects on module init)
+- [x] `docker-compose.yml` with Postgres 16 on **5433** (Homebrew Postgres owns 5432)
+- [x] Prisma **7** installed in `server/`; `schema.prisma` with `Project` +
+      `Event` models mirroring the domain entities (uuid v7 ids, cjs client
+      generated into `src/generated/prisma` — see phase-2.md addendum)
+- [x] First migration created and applied
+- [x] `PrismaService` in `src/shared/prisma/` (pg driver adapter, connects on
+      module init); global `PrismaModule`
+- [x] CI: Postgres 16 service container + `prisma generate`/`migrate deploy`
+      steps
 
 **Done when:** `docker compose up -d` + `prisma migrate dev` succeed; tables
-visible via `prisma studio` or `psql`.
+visible via `prisma studio` or `psql`. ✅ (verified: e2e connects, data
+survives compose down/up)
 
 ---
 
@@ -68,8 +73,11 @@ visible via `prisma studio` or `psql`.
 
 **Goal:** first full vertical slice through all four layers.
 
-- [ ] `CreateProjectUseCase` — generates `obs_<random>` API key
-- [ ] `ListProjectsUseCase`
+- [ ] `CreateProjectUseCase` — generates `obs_<random>` API key; returns the
+      plaintext key **once** in the response, stores only its SHA-256 hex
+      digest (deterministic hash so `findByApiKey` can hash-then-lookup;
+      bcrypt would break lookup)
+- [ ] `ListProjectsUseCase` (never returns keys — they're unrecoverable)
 - [ ] `PrismaProjectRepository` implements `ProjectRepository`
 - [ ] `ProjectsController`: `POST /api/projects`, `GET /api/projects`
 - [ ] DI binding in `projects.module.ts` (interface token → Prisma class)
@@ -87,7 +95,8 @@ in Postgres; unit tests pass without a database.
 - [ ] `POST /v1/events` accepting `{ apiKey, events: [...] }`
 - [ ] Validation DTOs (class-validator) — never trust outside JSON
 - [ ] API-key → project lookup via a provider **exported by the projects
-      module** (module-boundary rule; no deep imports)
+      module** (module-boundary rule; no deep imports); lookup hashes the
+      incoming key (SHA-256) before querying
 - [ ] `IngestEventsUseCase` + `PrismaClickEventRepository` bulk insert
 - [ ] CORS open on `/v1/events` (any website must be able to POST)
 
@@ -173,7 +182,8 @@ hammering ingestion returns 429; a cached API key skips the DB round trip.
 
 - [ ] `dashboard/` — React + Vite + TypeScript, TanStack Query, Recharts
 - [ ] Login page (JWT from Phase 7)
-- [ ] Projects list + create flow (shows API key + copy-paste install snippet)
+- [ ] Projects list + create flow (shows API key + copy-paste install snippet
+      **once, at creation** — hashed storage means it can't be shown again)
 - [ ] Project detail: stat cards, clicks-over-time chart, top elements +
       top pages tables, recent-events feed (polling)
 
