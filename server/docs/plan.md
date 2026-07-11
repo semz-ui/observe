@@ -49,18 +49,23 @@ or from node_modules frameworks.
 
 ---
 
-## Phase 2 — Database
+## Phase 2 — Database ✅ (done 2026-07-11)
 
 **Goal:** real persistence infrastructure, still behind the domain contracts.
 
-- [ ] `docker-compose.yml` with Postgres 16 on **5433** (Homebrew Postgres owns 5432)
-- [ ] Prisma installed in `server/`; `schema.prisma` with `Project` + `Event`
-      models mirroring the domain entities
-- [ ] First migration created and applied
-- [ ] `PrismaService` in `src/shared/` (connects on module init)
+- [x] `docker-compose.yml` with Postgres 16 on **5433** (Homebrew Postgres owns 5432)
+- [x] Prisma **7** installed in `server/`; `schema.prisma` with `Project` +
+      `Event` models mirroring the domain entities (uuid v7 ids, cjs client
+      generated into `src/generated/prisma` — see phase-2.md addendum)
+- [x] First migration created and applied
+- [x] `PrismaService` in `src/shared/prisma/` (pg driver adapter, connects on
+      module init); global `PrismaModule`
+- [x] CI: Postgres 16 service container + `prisma generate`/`migrate deploy`
+      steps
 
 **Done when:** `docker compose up -d` + `prisma migrate dev` succeed; tables
-visible via `prisma studio` or `psql`.
+visible via `prisma studio` or `psql`. ✅ (verified: e2e connects, data
+survives compose down/up)
 
 ---
 

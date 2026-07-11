@@ -1,5 +1,28 @@
 # Phase 2 — Database (Docker Postgres + Prisma)
 
+> **✅ Done (2026-07-11) — with a Prisma 7 reality check.** This doc was
+> written against Prisma 5/6 conventions; Prisma 7 changed several of them.
+> What actually shipped differs as follows:
+>
+> - **Client is generated into the project** (`src/generated/prisma`,
+>   gitignored + eslint-ignored), not into `node_modules`. Generator options
+>   `moduleFormat = "cjs"` and `importFileExtension = ""` were required to
+>   coexist with Nest's CommonJS build and Jest.
+> - **`prisma.config.ts`** now holds the datasource URL and loads `.env` via
+>   `dotenv` — Prisma no longer auto-reads `.env`. The app loads it too
+>   (`import 'dotenv/config'` in `main.ts`; jest-e2e `setupFiles`). The config
+>   file must be excluded in `tsconfig.build.json` or it widens `rootDir` and
+>   breaks the `dist/` layout.
+> - **A driver adapter is mandatory**: `@prisma/adapter-pg` in
+>   `PrismaService`'s constructor (`new PrismaPg({ connectionString })`).
+> - **Jest needs `NODE_OPTIONS=--experimental-vm-modules`** (baked into
+>   `test:e2e`) because Prisma 7's WASM query compiler loads via dynamic
+>   `import()`.
+> - **pnpm 11**: `prisma`, `@prisma/client`, `@prisma/engines` added to
+>   `allowBuilds` in `pnpm-workspace.yaml`.
+> - **IDs use `uuid(7)`** (time-ordered) instead of `uuid()` — random v4
+>   UUIDs fragment the primary-key B-tree under heavy insert load.
+
 **Goal:** a real Postgres running in Docker, a Prisma schema mirroring the
 Phase 1 domain entities, a first migration applied, and a `PrismaService` the
 rest of the app can inject. After this phase nothing *uses* the database yet —
