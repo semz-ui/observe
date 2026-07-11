@@ -160,13 +160,17 @@ API key.
 
 ---
 
-## Phase 8 — Redis
+## Phase 8 — Redis (infrastructure done early — 2026-07-11)
 
 **Goal:** speed and protection on the hot paths.
 
-- [ ] Redis 7 added to `docker-compose.yml`
-- [ ] Redis client in `src/shared/`, exposed to modules behind interfaces
-      (dependency rule applies to caches too)
+- [x] Redis 7 added to `docker-compose.yml` (host port **6380** — another
+      local container publishes 6379; healthcheck; no volume, cache data is
+      disposable) + CI service container
+- [x] Redis client in `src/shared/redis/` (`RedisService` extends ioredis,
+      fail-fast on missing `REDIS_URL`, disconnects via shutdown hooks;
+      global `RedisModule`); feature modules must still consume it behind
+      their own interfaces (dependency rule applies to caches too)
 - [ ] Cache API-key → project lookups on the ingest path (short TTL)
 - [ ] Cache hot analytics queries (short TTL, keyed by project + range)
 - [ ] Rate limiting on `/v1/events` (`@nestjs/throttler` with Redis storage)
