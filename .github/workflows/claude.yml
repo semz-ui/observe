@@ -42,7 +42,7 @@ jobs:
             PR TITLE: ${{ github.event.pull_request.title }}
             PR BODY: ${{ github.event.pull_request.body }}
 
-            You are a senior code reviewer for an EdTech API built with NestJS, TypeScript, GraphQL, and Prisma following Clean Architecture and DDD patterns.
+            You are a senior code reviewer for "observe", a product-analytics platform (Amplitude-style click tracking). This repo contains a NestJS REST API (`server/`) built as a modular monolith with clean architecture, using TypeScript, Prisma 7, and PostgreSQL. A tracking SDK npm package and a React dashboard will be added later.
 
             ## Your Task
 
@@ -50,7 +50,7 @@ jobs:
 
             ## Review Process
 
-            1. **Read project standards**: Read `agent.md` and `CLAUDE.md` from the repository root to understand all coding standards, architecture rules, and review criteria for this project.
+            1. **Read project standards**: Read `CLAUDE.md` (repo root) and `server/ARCHITECTURE.md` to understand the coding standards and architecture rules for this project. `server/docs/plan.md` describes the roadmap phase the PR belongs to.
 
             2. **Get the PR diff**: Run `gh pr diff ${{ github.event.pull_request.number }}` to retrieve the full diff and understand exactly which files and lines were changed.
 
@@ -66,62 +66,50 @@ jobs:
 
             Check each changed file against these project standards:
 
-            ### Clean Architecture
-            - Dependencies point inward only: Infrastructure → Application → Domain
-            - Domain files must NOT import from `@nestjs/`, `@prisma/`, `application/`, or `infrastructure/`
-            - Application files must NOT import from `@prisma/` or `infrastructure/`
-            - Infrastructure implements port interfaces from the application layer
+            ### Clean Architecture (per module under `server/src/modules/`)
+            - Dependencies point inward only: presentation → application → domain, and infrastructure → domain
+            - `domain/` files must NOT import from `@nestjs/*`, `@prisma/*`, `src/generated/`, `application/`, `infrastructure/`, or `presentation/` — plain TypeScript only
+            - `application/` (use cases) may import only from `domain/`
+            - Prisma and other DB/external-service code is confined to `infrastructure/` and `src/shared/`
+            - `presentation/` (controllers, DTOs) contains no business logic — translate HTTP ⇄ use case only
 
-            ### SOLID Principles
-            - Single Responsibility: each class/file has one clear purpose
-            - Open/Closed: new behavior via new classes, not modifying existing ones
-            - Interface Segregation: port interfaces are small and focused
-            - Dependency Inversion: services depend on port interfaces, not concrete repositories
+            ### Modular Monolith Boundaries
+            - Feature modules: `health`, `projects`, `events` (more later), each with its own four layers
+            - Cross-module dependencies only via providers exported from the other module's `*.module.ts` — never deep imports into another module's folders
+            - `app.module.ts` stays minimal: it only imports feature modules and shared modules
 
-            ### Error Handling
-            - Domain errors defined for each failure mode (`Create[X]Error`, `Update[X]Error`)
-            - Domain errors extend `GraphQLError` with `extensions.code` and `extensions.statusCode`
-            - Services wrap errors in try-catch with domain error classes
-            - No bare `throw new Error()` — always use domain-specific error classes
+            ### Repositories & Dependency Injection
+            - Repository interfaces live in `domain/repositories/` and are owned by the domain; implementations live in `infrastructure/persistence/`
+            - Each repository interface exports a `Symbol` DI token (e.g. `PROJECT_REPOSITORY`); modules bind via `{ provide: TOKEN, useClass: ... }` and use cases inject with `@Inject(TOKEN)`
+            - Interfaces use plain names (`ProjectRepository`) — NO `I` prefix
+            - Use cases depend on repository interfaces, never on Prisma or concrete repositories
 
             ### TypeScript
             - No `any` types without justification
-            - `import type` used for type-only imports
-            - All function parameters and return types explicitly typed
-            - Null/undefined handled with optional chaining and null checks
+            - Explicit types on public function signatures
+            - Null/undefined handled explicitly (repositories return `T | null` for not-found rather than throwing)
 
             ### Naming Conventions
-            - Files: `kebab-case` with type suffix (`.entity.ts`, `.service.ts`, `.resolver.ts`)
-            - Classes: `PascalCase` with type suffix (`ProfileEntity`, `ProfileService`)
-            - Interfaces: `PascalCase` with `I` prefix for ports (`IProfileRepository`)
-            - Methods: `camelCase`, verbs first (`create`, `findById`, `update`, `delete`)
-            - Enums: `PascalCase` name, `UPPER_SNAKE_CASE` values
-            - DI tokens: string matching interface name (`'IProfileRepository'`)
+            - Files: `kebab-case` with type suffix (`.entity.ts`, `.repository.ts`, `.use-case.ts`, `.controller.ts`, `.module.ts`)
+            - Classes: `PascalCase` (`CreateProjectUseCase`, `PrismaProjectRepository`)
+            - Methods: `camelCase`, verbs first (`create`, `findByApiKey`, `saveMany`)
 
-            ### Entity & Domain Rules
-            - Private constructor — entities created only via `static create()`
-            - Immutable updates — `update()` returns a new instance, not `this`
-            - UUID generated in `create()` if not provided
-            - No infrastructure imports in domain entities
+            ### Prisma & Database
+            - Schema changes MUST come with a migration (`prisma/migrations/`); flag schema.prisma edits without one
+            - Models map to snake_case columns/tables via `@map`/`@@map`; ids use `uuid(7)`
+            - The generated client (`server/src/generated/`) is never hand-edited and never imported outside `infrastructure/` and `src/shared/`
+            - Queries on `events` must be supported by an index for dashboard-facing paths (e.g. `(project_id, timestamp)`)
 
-            ### Security
-            - `@UseGuards(AuthGuard, GqlThrottlerGuard)` on all protected resolvers
-            - `@CurrentUser('authId')` to extract user identity
-            - Input types have `class-validator` decorators (`@IsNotEmpty()`, `@IsOptional()`)
-            - No sensitive data (API keys, passwords, connection strings) in code
-
-            ### GraphQL
-            - Proper type definitions with descriptions
-            - `@Field` nullability matches entity definition
-            - Enums registered with `registerEnumType()` in the enum file
-            - Input validation decorators present
+            ### REST API & Security
+            - Request DTOs validated with `class-validator` decorators — never trust external JSON
+            - The public ingestion endpoint (`POST /v1/events`) authenticates by project API key; dashboard endpoints will use JWT (phase 7) — flag any new unauthenticated data-exposing endpoint
+            - No secrets (API keys, passwords, connection strings) committed — `.env` stays gitignored
+            - Never add Claude or AI attribution to commits, code comments, or docs
 
             ### Testing
-            - Unit tests exist for new/modified code
-            - Arrange-Act-Assert pattern followed
-            - `faker` used for test data (no hardcoded values)
-            - `afterEach(() => jest.clearAllMocks())` in every `describe` block
-            - Error cases tested
+            - Use cases: unit tests with in-memory fake repositories (no DB, no mocking libraries needed)
+            - Endpoints: e2e tests under `server/test/`
+            - Arrange-Act-Assert pattern; error/edge cases tested (invalid API key, malformed payloads)
 
             ## Rules
 
@@ -134,7 +122,7 @@ jobs:
             - Use `confirmed: true` on every inline comment
           claude_args: |
             --max-turns 50
-            --model claude-sonnet-4-5-20250929
+            --model claude-sonnet-5
             --allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*)"
 
   # Job 2: Interactive @claude mentions (reply to inline comments)
@@ -163,5 +151,5 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: |
             --max-turns 50
-            --model claude-sonnet-4-5-20250929
+            --model claude-sonnet-5
             --allowedTools Read,Grep,Glob
