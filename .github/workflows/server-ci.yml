@@ -1,0 +1,64 @@
+name: Server CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/server-ci.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - '.github/workflows/server-ci.yml'
+
+defaults:
+  run:
+    working-directory: server
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # Phase 2+ will need Postgres for e2e tests — uncomment then:
+    # services:
+    #   postgres:
+    #     image: postgres:16
+    #     env:
+    #       POSTGRES_USER: observe
+    #       POSTGRES_PASSWORD: observe
+    #       POSTGRES_DB: observe
+    #     ports:
+    #       - 5433:5432
+    #     options: >-
+    #       --health-cmd pg_isready
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: server/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm exec eslint "{src,test}/**/*.ts"
+
+      - name: Build
+        run: pnpm build
+
+      - name: Unit tests
+        run: pnpm test --passWithNoTests
+
+      - name: E2E tests
+        run: pnpm test:e2e
