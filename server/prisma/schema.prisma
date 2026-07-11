@@ -12,6 +12,9 @@ datasource db {
 model Project {
   id        String   @id @default(uuid(7))
   name      String
+  // SHA-256 hex digest of the key — plaintext is shown once at creation and
+  // never stored. Lookups hash the incoming key first. (Deterministic hash,
+  // not bcrypt: per-row salts would break lookup-by-key.)
   apiKey    String   @unique @map("api_key")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 

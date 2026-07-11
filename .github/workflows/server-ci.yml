@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      # Points at the postgres service container below — its port 5432 is
+      # published on the runner's localhost as 5433, matching local dev.
       DATABASE_URL: postgresql://observe:observe@localhost:5433/observe
 
     services:

@@ -8,10 +8,14 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error(
+        'DATABASE_URL is not set. Copy server/.env.example to server/.env and start the database with `docker compose up -d`.',
+      );
+    }
     super({
-      adapter: new PrismaPg({
-        connectionString: process.env.DATABASE_URL,
-      }),
+      adapter: new PrismaPg({ connectionString }),
     });
   }
 
