@@ -50,4 +50,4 @@ Full explanation in `server/ARCHITECTURE.md`. The short version future work must
 ## Gotchas
 
 - pnpm 11 fails installs when a dependency's build script isn't approved; handled via `allowBuilds` in `server/pnpm-workspace.yaml` (the pre-v11 `ignoredBuiltDependencies` key no longer works).
-- Local Homebrew Postgres occupies 5432 — the project's Dockerized Postgres maps to **5433**.
+- Local port collisions: Homebrew Postgres holds 5432 and another container publishes 6379, so the project's Docker services map Postgres → **5433** and Redis → **6380** (locally and in CI).

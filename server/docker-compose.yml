@@ -17,5 +17,18 @@ services:
     volumes:
       - observe-pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7
+    container_name: observe-redis
+    ports:
+      # 6380 on the host — another local container already publishes 6379
+      - '6380:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    # no volume: it holds caches and rate-limit counters only — safe to lose
+
 volumes:
   observe-pgdata:
