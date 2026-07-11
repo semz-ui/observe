@@ -1,8 +1,10 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService extends Redis implements OnModuleDestroy {
+  private readonly logger = new Logger(RedisService.name);
+
   constructor() {
     const url = process.env.REDIS_URL;
     if (!url) {
@@ -14,6 +16,11 @@ export class RedisService extends Redis implements OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    await this.quit();
+    try {
+      await this.quit();
+    } catch (error) {
+      // a connection already gone must not break the shutdown sequence
+      this.logger.warn(`Redis quit failed during shutdown: ${String(error)}`);
+    }
   }
 }
