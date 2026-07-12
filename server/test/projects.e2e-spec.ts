@@ -59,6 +59,24 @@ describe('ProjectsController (e2e)', () => {
       .expect(400);
   });
 
+  it('POST /api/projects rejects a whitespace-only name', () => {
+    return request(app.getHttpServer())
+      .post('/api/projects')
+      .send({ name: '   ' })
+      .expect(400);
+  });
+
+  it('POST /api/projects trims surrounding whitespace from the name', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/projects')
+      .send({ name: '  padded name  ' })
+      .expect(201);
+
+    const body = res.body as CreateProjectResponse;
+    createdIds.push(body.id);
+    expect(body.name).toBe('padded name');
+  });
+
   it('GET /api/projects lists projects without key material', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/projects')
