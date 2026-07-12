@@ -18,7 +18,7 @@ This is a **learning project**: Michael writes the code himself; Claude explains
 - `packages/sdk` (planned) — npm package websites install to auto-capture clicks
 - `dashboard/` (planned) — React + Vite + TanStack Query + Recharts UI
 
-The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–1 done; next is Phase 2: Docker Postgres on port **5433** + Prisma — spec in `server/docs/phase-2.md`). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
+The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–3 done, plus Phase 8's Redis infrastructure pulled forward; next is Phase 4: event ingestion — `POST /v1/events`). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
 
 ## Commands
 
@@ -35,7 +35,7 @@ pnpm test -- -t "test name"           # single test by name
 pnpm test:e2e                         # e2e tests (test/jest-e2e.json config)
 ```
 
-CI (`.github/workflows/server-ci.yml`) runs install → lint → build → unit → e2e, path-filtered to `server/**`. Unit tests currently use `--passWithNoTests`; remove that once real unit tests exist. A commented-out Postgres service block in the workflow is ready for when tests need a database.
+CI (`.github/workflows/server-ci.yml`) runs install → lint → build → unit → e2e with Postgres and Redis service containers, path-filtered to `server/**`.
 
 ## Architecture: modular monolith + clean architecture
 

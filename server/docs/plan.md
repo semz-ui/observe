@@ -69,22 +69,29 @@ survives compose down/up)
 
 ---
 
-## Phase 3 — Projects module
+## Phase 3 — Projects module ✅ (done 2026-07-12)
 
 **Goal:** first full vertical slice through all four layers.
 
-- [ ] `CreateProjectUseCase` — generates `obs_<random>` API key; returns the
+- [x] `CreateProjectUseCase` — generates `obs_<random>` API key; returns the
       plaintext key **once** in the response, stores only its SHA-256 hex
-      digest (deterministic hash so `findByApiKey` can hash-then-lookup;
-      bcrypt would break lookup)
-- [ ] `ListProjectsUseCase` (never returns keys — they're unrecoverable)
-- [ ] `PrismaProjectRepository` implements `ProjectRepository`
-- [ ] `ProjectsController`: `POST /api/projects`, `GET /api/projects`
-- [ ] DI binding in `projects.module.ts` (interface token → Prisma class)
-- [ ] Unit test of the use case with an in-memory fake repository
+      digest (deterministic hash so lookup can hash-then-query; bcrypt would
+      break lookup). Key logic lives in `domain/services/api-key.ts`; the
+      entity field is `apiKeyHash` so a stored `Project` can never hold
+      plaintext
+- [x] `ListProjectsUseCase` (never returns keys — they're unrecoverable)
+- [x] `PrismaProjectRepository` implements `ProjectRepository`
+      (`create` takes `CreateProjectInput`; Prisma defaults fill id/createdAt)
+- [x] `ProjectsController`: `POST /api/projects`, `GET /api/projects`;
+      global `ValidationPipe({ whitelist: true })` + `CreateProjectDto`
+- [x] DI binding in `projects.module.ts` (interface token → Prisma class)
+- [x] Unit test of the use cases with an in-memory fake repository
+      (`--passWithNoTests` removed from CI); projects e2e spec
 
 **Done when:** creating a project via curl returns an API key and the row is
-in Postgres; unit tests pass without a database.
+in Postgres; unit tests pass without a database. ✅ (verified: 201 + `obs_`
+key via curl, `projects.api_key` column matches sha-256 of the returned key,
+empty name → 400, list output carries no key fields)
 
 ---
 
