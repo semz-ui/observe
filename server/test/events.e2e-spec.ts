@@ -41,8 +41,12 @@ describe('EventsController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.event.deleteMany({ where: { projectId } });
-    await prisma.project.delete({ where: { id: projectId } });
+    // guard: if beforeAll failed, projectId is undefined — and Prisma treats
+    // an undefined filter as "no filter", which would deleteMany EVERYTHING
+    if (projectId) {
+      await prisma.event.deleteMany({ where: { projectId } });
+      await prisma.project.delete({ where: { id: projectId } });
+    }
     await app.close();
   });
 
@@ -81,6 +85,15 @@ describe('EventsController (e2e)', () => {
       .send({
         apiKey,
         events: [{ ...baseEvent, elementTag: '', timestamp: 'not-a-date' }],
+      })
+      .expect(400);
+
+    // oversized field — every string is MaxLength-capped
+    await request(app.getHttpServer())
+      .post('/v1/events')
+      .send({
+        apiKey,
+        events: [{ ...baseEvent, url: `http://localhost/${'a'.repeat(3000)}` }],
       })
       .expect(400);
   });
