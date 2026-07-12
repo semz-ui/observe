@@ -18,7 +18,7 @@ This is a **learning project**: Michael writes the code himself; Claude explains
 - `packages/sdk` (planned) — npm package websites install to auto-capture clicks
 - `dashboard/` (planned) — React + Vite + TanStack Query + Recharts UI
 
-The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–3 done, plus Phase 8's Redis infrastructure pulled forward; next is Phase 4: event ingestion — `POST /v1/events`). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
+The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–4 done, plus Phase 8's Redis infrastructure pulled forward; next is Phase 5: the SDK npm package). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
 
 ## Commands
 
