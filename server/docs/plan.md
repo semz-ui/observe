@@ -113,8 +113,9 @@ empty name → 400, list output carries no key fields)
       from the key, never the payload; throws framework-free
       `InvalidApiKeyError`, mapped to 401 in the controller) +
       `PrismaClickEventRepository` bulk insert (`createMany`)
-- [x] CORS open via `app.enableCors()` (CORS gates browsers only; the API
-      key is the access control)
+- [x] CORS open on `/v1/events` only (`app.use('/v1/events', cors())`) —
+      the `/api/*` endpoints keep failing preflights until Phase 7 gives
+      them real auth
 
 **Done when:** a curl batch with a valid key returns 202 and rows land in the
 events table; an invalid key gets 401; malformed events get 400. ✅ (verified
