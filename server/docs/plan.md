@@ -95,20 +95,31 @@ empty name → 400, list output carries no key fields)
 
 ---
 
-## Phase 4 — Event ingestion
+## Phase 4 — Event ingestion ✅ (done 2026-07-12)
 
 **Goal:** the public endpoint the SDK will talk to.
 
-- [ ] `POST /v1/events` accepting `{ apiKey, events: [...] }`
-- [ ] Validation DTOs (class-validator) — never trust outside JSON
-- [ ] API-key → project lookup via a provider **exported by the projects
-      module** (module-boundary rule; no deep imports); lookup hashes the
-      incoming key (SHA-256) before querying
-- [ ] `IngestEventsUseCase` + `PrismaClickEventRepository` bulk insert
-- [ ] CORS open on `/v1/events` (any website must be able to POST)
+- [x] `POST /v1/events` accepting `{ apiKey, events: [...] }` (key in the
+      body, not a header — Phase 5's `sendBeacon` can't set headers); 202,
+      no response body
+- [x] Validation DTOs (class-validator) — nested `@ValidateNested` +
+      `@Type`, batch capped at 100 events, timestamps as ISO strings
+- [x] API-key → project lookup via a provider **exported by the projects
+      module**: `PROJECT_LOOKUP` token + `ProjectLookup` port, re-exported
+      through `modules/projects/index.ts` (the module's public barrel — no
+      deep imports); lookup hashes the incoming key (SHA-256) before
+      querying. Phase 8 can swap in a cached implementation via the binding
+- [x] `IngestEventsUseCase` (stamps the resolved projectId — identity comes
+      from the key, never the payload; throws framework-free
+      `InvalidApiKeyError`, mapped to 401 in the controller) +
+      `PrismaClickEventRepository` bulk insert (`createMany`)
+- [x] CORS open via `app.enableCors()` (CORS gates browsers only; the API
+      key is the access control)
 
 **Done when:** a curl batch with a valid key returns 202 and rows land in the
-events table; an invalid key gets 401; malformed events get 400.
+events table; an invalid key gets 401; malformed events get 400. ✅ (verified
+live + e2e; also: smuggled `projectId` in the payload is overridden, CORS
+preflight from an arbitrary origin returns `access-control-allow-origin: *`)
 
 ---
 
