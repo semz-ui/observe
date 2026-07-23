@@ -146,19 +146,24 @@ mid-batch still delivers events.
 
 ---
 
-## Phase 6 — Analytics queries
+## Phase 6 — Analytics queries ✅ (done 2026-07-20)
 
 **Goal:** turn raw events into answers — the read side of the product.
 
-- [ ] Stats endpoints on the events module, date-range params (`from`/`to`):
+- [x] Stats endpoints on the events module, date-range params (`from`/`to`):
+      `GET /v1/stats`, half-open `[from, to)` range, `EventStatsRepository`
+      read port
   - totals: events, unique visitors, sessions
   - events-per-day time series
   - top clicked elements (by selector)
   - top pages
-- [ ] Recent-events feed endpoint (paginated)
+- [x] Recent-events feed endpoint (paginated) — `GET /v1/events/recent`,
+      keyset cursor on the uuid-v7 `id` (stable, drift-free); dedicated
+      `EventFeedRepository` read port; `@@index([projectId, id])` migration
 
 **Done when:** curl returns correct numbers for known test data (verify by
-hand against SQL).
+hand against SQL). ✅ (unit + e2e green; feed paginates newest-first with no
+overlap, bad cursor → 400)
 
 ---
 

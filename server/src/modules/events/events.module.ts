@@ -2,10 +2,13 @@ import { Module } from '@nestjs/common';
 import { ProjectsModule } from '../projects';
 import { CLICK_EVENT_REPOSITORY } from './domain/repositories/click-event.repository';
 import { EVENT_STATS_REPOSITORY } from './domain/repositories/event-stats.repository';
+import { EVENT_FEED_REPOSITORY } from './domain/repositories/event-feed.repository';
 import { IngestEventsUseCase } from './application/use-cases/ingest-events.use-case';
 import { GetProjectStatsUseCase } from './application/use-cases/get-project-stats.use-case';
+import { GetRecentEventsUseCase } from './application/use-cases/get-recent-events.use-case';
 import { PrismaClickEventRepository } from './infrastructure/persistence/prisma-click-event.repository';
 import { PrismaEventStatsRepository } from './infrastructure/persistence/prisma-event-stats.repository';
+import { PrismaEventFeedRepository } from './infrastructure/persistence/prisma-event-feed.repository';
 import { EventsController } from './presentation/controllers/events.controller';
 import { StatsController } from './presentation/controllers/stats.controller';
 
@@ -16,8 +19,10 @@ import { StatsController } from './presentation/controllers/stats.controller';
   providers: [
     { provide: CLICK_EVENT_REPOSITORY, useClass: PrismaClickEventRepository },
     { provide: EVENT_STATS_REPOSITORY, useClass: PrismaEventStatsRepository },
+    { provide: EVENT_FEED_REPOSITORY, useClass: PrismaEventFeedRepository },
     IngestEventsUseCase,
     GetProjectStatsUseCase,
+    GetRecentEventsUseCase,
   ],
 })
 export class EventsModule {}
