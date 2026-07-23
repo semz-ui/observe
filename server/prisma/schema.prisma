@@ -42,5 +42,7 @@ model Event {
   project Project @relation(fields: [projectId], references: [id])
 
   @@index([projectId, timestamp])
+  // keyset feed: WHERE project_id = ? AND id < cursor ORDER BY id DESC
+  @@index([projectId, id])
   @@map("events")
 }
