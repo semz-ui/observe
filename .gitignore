@@ -4,3 +4,4 @@ server/src/generated/
 coverage/
 .env
 .DS_Store
+/docs/

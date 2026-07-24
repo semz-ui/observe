@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>observe SDK — demo site</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+      button { font-size: 1rem; padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+      .hint { color: #666; font-size: 0.9rem; }
+      code { background: #f3f3f3; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>observe — demo site</h1>
+    <p class="hint">
+      Open the browser devtools console (⌥⌘I). When the page loads you should
+      see <code>[observe] init</code> logged by the SDK's IIFE build.
+    </p>
+
+    <h2>Clickable things (autocapture lands in M3)</h2>
+    <button id="buy-now">Buy now</button>
+    <button data-obs="signup-cta">Sign up</button>
+    <a href="/pricing">Pricing link</a>
+
+    <!-- the IIFE build attaches window.Observe; ../../dist is tsup's output -->
+    <script src="../../dist/index.global.js"></script>
+    <script>
+      Observe.init({
+        apiKey: 'obs_demo_key',
+        apiHost: 'http://localhost:3000',
+      });
+    </script>
+  </body>
+</html>

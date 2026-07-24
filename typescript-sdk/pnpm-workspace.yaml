@@ -1,0 +1,4 @@
+# Standalone project (not part of a workspace with server/). This file only
+# carries pnpm's build-script approvals — esbuild ships tsup's native binary.
+allowBuilds:
+  esbuild: true
