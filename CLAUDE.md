@@ -14,15 +14,17 @@ This is a **learning project**: Michael writes the code himself; Claude explains
 
 "observe" — a simple Amplitude-style product-analytics platform, all TypeScript:
 
-- `server/` — NestJS API (the only part that exists so far)
-- `packages/sdk` (planned) — npm package websites install to auto-capture clicks
+- `server/` — NestJS API
+- `typescript-sdk/` — `@observe/sdk`, the script websites install to auto-capture
+  clicks. Standalone package with its own pnpm lockfile, **not** a workspace with
+  `server/` (see its README)
 - `dashboard/` (planned) — React + Vite + TanStack Query + Recharts UI
 
-The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–4 done, plus Phase 8's Redis infrastructure pulled forward; next is Phase 5: the SDK npm package). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
+The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–6 done, plus Phase 8's Redis infrastructure pulled forward; next is Phase 7: authentication). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
 
 ## Commands
 
-All server work happens in `server/`:
+Server work happens in `server/`:
 
 ```bash
 pnpm install                          # pnpm 11; build scripts gated via allowBuilds in pnpm-workspace.yaml
@@ -36,6 +38,17 @@ pnpm test:e2e                         # e2e tests (test/jest-e2e.json config)
 ```
 
 CI (`.github/workflows/server-ci.yml`) runs install → lint → build → unit → e2e with Postgres and Redis service containers, path-filtered to `server/**`.
+
+SDK work happens in `typescript-sdk/` (its own install; no eslint there yet):
+
+```bash
+pnpm test        # vitest + jsdom (src/**/*.spec.ts)
+pnpm typecheck   # tsc --noEmit
+pnpm build       # tsup → ESM + CJS + IIFE in dist/
+pnpm demo        # build, then serve examples/demo-site on :4173
+```
+
+CI for it is `.github/workflows/sdk-ci.yml`, path-filtered to `typescript-sdk/**`.
 
 ## Architecture: modular monolith + clean architecture
 

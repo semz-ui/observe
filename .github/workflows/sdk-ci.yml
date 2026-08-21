@@ -1,0 +1,48 @@
+name: SDK CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'typescript-sdk/**'
+      - '.github/workflows/sdk-ci.yml'
+  pull_request:
+    paths:
+      - 'typescript-sdk/**'
+      - '.github/workflows/sdk-ci.yml'
+
+defaults:
+  run:
+    working-directory: typescript-sdk
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # test-only workflow — never leave the GITHUB_TOKEN in git config
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: typescript-sdk/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build

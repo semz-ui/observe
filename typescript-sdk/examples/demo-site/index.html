@@ -5,31 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>observe SDK — demo site</title>
     <style>
-      body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
-      button { font-size: 1rem; padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+      body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.5; }
+      button { font-size: 1rem; padding: 0.5rem 1rem; margin: 0.25rem 0.25rem 0.25rem 0; cursor: pointer; }
       .hint { color: #666; font-size: 0.9rem; }
       code { background: #f3f3f3; padding: 0.1rem 0.3rem; border-radius: 3px; }
+      #log { background: #111; color: #b6f7b0; font-family: ui-monospace, monospace; font-size: 0.8rem;
+             padding: 0.75rem; border-radius: 6px; height: 11rem; overflow: auto; white-space: pre-wrap; }
+      nav a { margin-right: 0.75rem; }
     </style>
   </head>
   <body>
     <h1>observe — demo site</h1>
     <p class="hint">
-      Open the browser devtools console (⌥⌘I). When the page loads you should
-      see <code>[observe] init</code> logged by the SDK's IIFE build.
+      Every click on this page is autocaptured and batched to
+      <code>POST /v1/events</code>. Create a project on the API first, then put
+      its <code>obs_…</code> key in the <code>init()</code> call at the bottom of
+      this file:
     </p>
+    <pre class="hint"><code>curl -X POST http://localhost:3000/api/projects \
+  -H 'content-type: application/json' -d '{"name":"demo"}'</code></pre>
 
-    <h2>Clickable things (autocapture lands in M3)</h2>
+    <h2>Things to click</h2>
     <button id="buy-now">Buy now</button>
-    <button data-obs="signup-cta">Sign up</button>
-    <a href="/pricing">Pricing link</a>
+    <button data-obs="signup-cta"><span>Sign <em>up</em></span></button>
+    <button>Unlabelled button</button>
+
+    <nav>
+      <a href="#pricing">Pricing</a>
+      <a href="#docs">Docs</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <ul id="plans">
+      <li>Free</li>
+      <li>Pro</li>
+      <li>Enterprise</li>
+    </ul>
+
+    <h2>What the SDK is doing</h2>
+    <p class="hint">
+      The queue flushes every 3 s or every 5 clicks (tightened from the 5 s / 20
+      defaults so the demo is easier to watch), and beacons whatever is left when
+      the tab closes. Network calls are mirrored below and in the Network tab.
+    </p>
+    <div id="log">waiting for clicks…</div>
 
     <!-- the IIFE build attaches window.Observe; ../../dist is tsup's output -->
     <script src="../../dist/index.global.js"></script>
     <script>
       Observe.init({
-        apiKey: 'obs_demo_key',
+        apiKey: 'obs_replace_me',
         apiHost: 'http://localhost:3000',
+        flushInterval: 3000,
+        batchSize: 5,
       });
+
+      // Demo-only plumbing: wrap fetch/sendBeacon so the page can show what the
+      // SDK sends. Nothing here is part of the SDK.
+      const log = document.getElementById('log');
+      const write = (line) => {
+        log.textContent = `${new Date().toLocaleTimeString()}  ${line}\n${log.textContent}`;
+      };
+      const describe = (body) => {
+        try {
+          const { events } = JSON.parse(body);
+          return `${events.length} event(s): ${events.map((e) => e.elementSelector).join(', ')}`;
+        } catch {
+          return body;
+        }
+      };
+
+      const realFetch = window.fetch.bind(window);
+      window.fetch = (url, options = {}) => {
+        if (String(url).endsWith('/v1/events')) write(`POST → ${describe(options.body)}`);
+        return realFetch(url, options).then((res) => {
+          if (String(url).endsWith('/v1/events')) write(`  ↳ ${res.status} ${res.statusText}`);
+          return res;
+        });
+      };
+
+      const realBeacon = navigator.sendBeacon.bind(navigator);
+      navigator.sendBeacon = (url, blob) => {
+        write('beacon → page hiding, flushing the tail');
+        return realBeacon(url, blob);
+      };
     </script>
   </body>
 </html>

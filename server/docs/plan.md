@@ -124,25 +124,45 @@ preflight from an arbitrary origin returns `access-control-allow-origin: *`)
 
 ---
 
-## Phase 5 — SDK npm package
+## Phase 5 — SDK npm package ✅ (done 2026-08-21)
 
 **Goal:** the installable tracker — the product's front door.
 
-- [ ] Monorepo root: `git init`, root `package.json` (private),
-      `pnpm-workspace.yaml` covering `server`, `packages/*`
-- [ ] `packages/sdk` (`@observe/sdk`): `init({ apiKey, apiHost })`
-- [ ] Click autocapture: capture-phase document listener; element tag, id,
-      text (truncated), CSS-selector builder, href, page URL
-- [ ] Identity: anonymous ID in localStorage; session ID with 30-min
-      inactivity timeout
-- [ ] Transport: batching queue (flush at 5 s / 20 events), `sendBeacon` on
-      pagehide so events survive navigation
-- [ ] tsup builds: ESM + CJS + IIFE (`window.Observe` for script tags)
-- [ ] `examples/demo-site` — plain HTML page using the IIFE build
+- [x] Standalone `typescript-sdk/` package (`@observe/sdk`) with its own pnpm
+      lockfile — *not* a workspace shared with `server/`: the SDK ships onto
+      other people's sites and gains nothing from the API's dependency tree
+- [x] `init({ apiKey, apiHost, flushInterval?, batchSize?, sessionTimeout? })` —
+      idempotent, plus `flush()` and `stop()`; bad config warns instead of
+      throwing on a host page
+- [x] Click autocapture: capture-phase `document` listener, attributed to the
+      nearest enclosing control; CSS-selector builder (stops at the first id,
+      `:nth-of-type` only when siblings are ambiguous, depth-capped at 5);
+      tag / id / text / href / url / title, every string truncated to the
+      server's `@MaxLength` caps so a 400 can't be the SDK's fault
+- [x] Identity: anonymous id in localStorage; session id with a 30-min
+      inactivity timeout, refreshed on every click; `crypto.randomUUID` →
+      `getRandomValues` → `Math.random` fallback chain, and an in-memory store
+      when localStorage is missing or starts throwing
+- [x] Transport: batching queue (flush at `batchSize` events / `flushInterval`
+      ms), `sendBeacon` on pagehide + visibilitychange with a `keepalive` fetch
+      backup. Failure policy: 5xx and network errors requeue at the front, 4xx
+      drops (retrying a bad key can only fail again), buffer capped at 500 and
+      requests at 100 (the DTO's `@ArrayMaxSize`)
+- [x] tsup builds: ESM + CJS + IIFE (`window.Observe` for script tags), ~2.8 KB
+      min+gzip
+- [x] Vitest + jsdom unit tests and `sdk-ci.yml` (typecheck → test → build,
+      path-filtered to `typescript-sdk/**`)
+- [x] `examples/demo-site` — plain HTML page on the IIFE build, with a live log
+      of every batch the SDK posts
 
 **Done when:** clicking around the demo site produces rows in Postgres with
 correct selectors, session IDs persist across clicks, and closing the tab
-mid-batch still delivers events.
+mid-batch still delivers events. ✅ (verified against a live server by driving
+the built IIFE bundle in jsdom: four clicks → four rows, one anonymousId and
+one sessionId across all of them, a click on the `<span>` inside a button
+recorded as the button, `#plans > li:nth-of-type(2)` for the ambiguous sibling,
+an absolute `elementHref` for the anchor, and the last click delivered by
+`sendBeacon` after `pagehide`)
 
 ---
 

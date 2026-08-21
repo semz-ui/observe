@@ -1,2 +1,2 @@
-export { init } from './client';
-export type { ObserveConfig } from './types';
+export { init, flush, stop } from './client';
+export type { ObserveConfig, ClickEvent } from './types';
