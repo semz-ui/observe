@@ -40,19 +40,26 @@ function getBackend(): Backend {
   return (backend ??= detectBackend());
 }
 
+/** Swap the cached backend to memory. Called when the detected localStorage
+ *  backend starts throwing *after* the probe passed (e.g. quota fills mid-
+ *  session), so subsequent reads/writes stop hitting the broken store. */
+function fallToMemory(): Backend {
+  return (backend = memoryBackend());
+}
+
 export const safeStorage = {
   get(key: string): string | null {
     try {
       return getBackend().get(key);
     } catch {
-      return null;
+      return fallToMemory().get(key); // memory backend never throws
     }
   },
   set(key: string, value: string): void {
     try {
       getBackend().set(key, value);
     } catch {
-      // Persistence is best-effort — a full quota or a late failure is non-fatal.
+      fallToMemory().set(key, value); // retry in memory; persistence is best-effort
     }
   },
 };
