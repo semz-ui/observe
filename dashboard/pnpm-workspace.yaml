@@ -1,0 +1,6 @@
+# Standalone project (not part of a workspace with server/ or typescript-sdk/).
+# This file only carries pnpm's build-script approvals — next pulls native
+# binaries that pnpm 11 refuses to build until each is named here.
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
