@@ -49,21 +49,36 @@ variables (shadcn's token setup already gives you this).
 
 ### shadcn primitives this phase needs
 
-`button table card badge input select skeleton dialog dropdown-menu`
+`button table card badge input select skeleton dialog dropdown-menu` — already
+installed.
+
+Two things about the setup, because the CLI's defaults fight this layout:
+
+- It was initialised with `shadcn init -b radix -p nova`. `--base-color` no longer
+  exists; `-b` now picks the primitive library (`base` | `radix` | `aria`) and `-p`
+  picks a preset. Without `-p` the CLI prompts and will hang a non-interactive run.
+- The aliases in `components.json` are redirected to `@/shared/ui`, `@/shared/lib`
+  and `@/shared/hooks`. The CLI defaults to `@/components/ui` plus a separate
+  `@/lib/utils`, which would leave two competing "shared" roots. Because the
+  redirect lives in `components.json`, later `shadcn add` calls land in the right
+  place on their own — but generated components come double-quoted and
+  semicolon-less, so run `pnpm exec prettier --write "src/shared/**/*.{ts,tsx}"`
+  after adding any.
 
 ---
 
-## Decisions for you
+## Decisions taken
 
-- **Where do the schemas live** — `shared/api/`, or each module's `domain/`? Module
-  `domain/` is more faithful to the layering and keeps `shared/` thin; `shared/api/` is
-  less ceremony and keeps all the API quirks in one file. Either works — pick one and
-  write it into the overview doc, because inconsistency here will spread.
-- **Error surface from `http.ts`** — a discriminated-union `Result` type, or thrown errors
-  caught by TanStack Query and error boundaries? Throwing is more idiomatic with TanStack
-  Query; `Result` makes the ViewModel's error handling explicit and easier to unit-test.
-- **Validation library** — zod is the default assumption, but nothing in the repo commits
-  you to it.
+- **Schemas live in each module's `domain/`** — `modules/events/domain/event.ts` owns the
+  `Event` type and its schema. This keeps `shared/` thin and a module self-contained,
+  matching the server's layering. The cost is that the API's quirks get restated per
+  module; the list in the overview doc is the single source to restate *from*.
+- **`http.ts` throws a typed `ApiError`** carrying `status` and a flattened message,
+  rather than returning a `Result` union. TanStack Query catches throws natively and
+  turns them into `isError`/`error`, and in a Server Component the throw bubbles to
+  `error.tsx` — so a `Result` would only be unwrapped and re-thrown at every boundary.
+- **zod** at the parse boundary, with the domain type `infer`red from the schema so the
+  type and the runtime check cannot drift.
 
 ---
 
