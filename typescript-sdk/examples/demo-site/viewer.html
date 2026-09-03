@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>observe — event viewer</title>
+    <style>
+      :root {
+        --bg: #0f1115; --panel: #171a21; --line: #262b36; --text: #e6e9ef;
+        --muted: #8b93a7; --accent: #6ee7a8; --warn: #f7b955; --err: #ff6b6b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--bg); color: var(--text);
+        font-family: system-ui, -apple-system, sans-serif; line-height: 1.5;
+      }
+      header {
+        padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--line);
+        display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+      }
+      h1 { font-size: 1.1rem; margin: 0; font-weight: 600; }
+      h1 span { color: var(--muted); font-weight: 400; }
+      .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-left: auto; align-items: center; }
+      input, button {
+        font: inherit; font-size: 0.85rem; padding: 0.4rem 0.6rem; border-radius: 6px;
+        border: 1px solid var(--line); background: var(--panel); color: var(--text);
+      }
+      input { min-width: 20rem; font-family: ui-monospace, monospace; font-size: 0.78rem; }
+      input:focus { outline: 1px solid var(--accent); }
+      button { cursor: pointer; }
+      button:hover { border-color: var(--muted); }
+      button[data-active='false'] { color: var(--warn); }
+      main { padding: 1.5rem; max-width: 78rem; margin: 0 auto; }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+      .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem 1rem; }
+      .stat b { display: block; font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .stat small { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      .status { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.75rem; min-height: 1.5rem; }
+      .status.error { color: var(--err); }
+      .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+      table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+      th { text-align: left; color: var(--muted); font-weight: 500; font-size: 0.72rem;
+           text-transform: uppercase; letter-spacing: 0.04em; padding: 0.6rem 0.75rem;
+           background: var(--panel); border-bottom: 1px solid var(--line); white-space: nowrap; }
+      td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+      tr:last-child td { border-bottom: 0; }
+      td.mono { font-family: ui-monospace, monospace; font-size: 0.78rem; }
+      td.sel { color: var(--accent); }
+      td.dim { color: var(--muted); }
+      .id { font-family: ui-monospace, monospace; font-size: 0.72rem; color: var(--muted); }
+      .swatch { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: baseline; }
+      .truncate { max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      @keyframes flash { from { background: rgba(110, 231, 168, 0.16); } to { background: transparent; } }
+      tr.new td { animation: flash 1.6s ease-out; }
+      .empty { padding: 2.5rem 1rem; text-align: center; color: var(--muted); }
+      footer { padding: 0 1.5rem 2rem; max-width: 78rem; margin: 0 auto; color: var(--muted); font-size: 0.8rem; }
+      code { background: var(--panel); padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.78rem; }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>observe <span>· event viewer</span></h1>
+      <div class="controls">
+        <input id="host" value="http://localhost:3000" aria-label="API host" style="min-width: 12rem" />
+        <input id="project" placeholder="project id (uuid from POST /api/projects)" aria-label="Project id" />
+        <button id="toggle" data-active="true">⏸ pause</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="stats">
+        <div class="stat"><small>events</small><b id="s-events">—</b></div>
+        <div class="stat"><small>visitors</small><b id="s-visitors">—</b></div>
+        <div class="stat"><small>sessions</small><b id="s-sessions">—</b></div>
+        <div class="stat"><small>last minute</small><b id="s-recent">—</b></div>
+      </div>
+
+      <div class="status" id="status">Paste a project id to start polling.</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>when</th><th>element</th><th>selector</th><th>text</th>
+              <th>page</th><th>visitor</th><th>session</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td class="empty" colspan="7">No events yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <footer>
+      Polls <code>GET /v1/events/recent</code> every 2s and shows the newest 50 events.
+      Counters are derived from that page of events, not from <code>/v1/stats</code> — only
+      <code>/v1/events</code> is CORS-open until Phase 7 adds auth.
+      Generate some data on the <a href="./index.html">demo site</a>.
+    </footer>
+
+    <script>
+      const POLL_MS = 2000;
+      const LIMIT = 50;
+
+      const el = (id) => document.getElementById(id);
+      const hostInput = el('host');
+      const projectInput = el('project');
+      const statusEl = el('status');
+      const rowsEl = el('rows');
+      const toggleBtn = el('toggle');
+
+      // Remember the ids between reloads so the viewer is one paste, not two.
+      const saved = (key, fallback) => {
+        try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+      };
+      const save = (key, value) => {
+        try { localStorage.setItem(key, value); } catch { /* private mode — fine */ }
+      };
+
+      hostInput.value = saved('viewer_host', hostInput.value);
+      projectInput.value = saved('viewer_project', '');
+      hostInput.addEventListener('change', () => save('viewer_host', hostInput.value.trim()));
+      projectInput.addEventListener('change', () => save('viewer_project', projectInput.value.trim()));
+
+      let running = true;
+      let seen = new Set();
+      let firstRender = true;
+
+      toggleBtn.addEventListener('click', () => {
+        running = !running;
+        toggleBtn.textContent = running ? '⏸ pause' : '▶ resume';
+        toggleBtn.dataset.active = String(running);
+        if (running) poll();
+      });
+
+      const setStatus = (text, isError = false) => {
+        statusEl.textContent = text;
+        statusEl.classList.toggle('error', isError);
+      };
+
+      /** Stable colour per id, so one visitor is one hue across rows. */
+      const hue = (id) => {
+        let h = 0;
+        for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 360;
+        return `hsl(${h} 65% 60%)`;
+      };
+
+      const shortId = (id) =>
+        `<span class="swatch" style="background:${hue(id)}"></span>${id.slice(0, 8)}`;
+
+      const clock = (iso) => {
+        const d = new Date(iso);
+        const ago = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+        const rel = ago < 60 ? `${ago}s ago` : `${Math.round(ago / 60)}m ago`;
+        return `${d.toLocaleTimeString()}<br><span class="id">${rel}</span>`;
+      };
+
+      const escape = (value) =>
+        String(value ?? '').replace(/[&<>"]/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        );
+
+      // The feed validates projectId as a plain string, so a malformed id comes
+      // back as 200 with an empty list rather than an error — say so explicitly.
+      const looksLikeUuid = (value) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+      const pathOf = (url) => {
+        try { const u = new URL(url); return u.pathname + u.search; } catch { return url; }
+      };
+
+      function renderStats(events) {
+        el('s-events').textContent = events.length;
+        el('s-visitors').textContent = new Set(events.map((e) => e.anonymousId)).size;
+        el('s-sessions').textContent = new Set(events.map((e) => e.sessionId)).size;
+        const cutoff = Date.now() - 60_000;
+        el('s-recent').textContent = events.filter((e) => Date.parse(e.timestamp) >= cutoff).length;
+      }
+
+      function renderRows(events) {
+        if (events.length === 0) {
+          rowsEl.innerHTML = '<tr><td class="empty" colspan="7">No events yet — go click around the demo site.</td></tr>';
+          return;
+        }
+
+        rowsEl.innerHTML = events
+          .map((e) => {
+            const isNew = !firstRender && !seen.has(e.id);
+            const label = e.elementId ? `${e.elementTag}#${e.elementId}` : e.elementTag;
+            return `<tr class="${isNew ? 'new' : ''}">
+              <td class="dim" style="white-space:nowrap">${clock(e.timestamp)}</td>
+              <td class="mono">${escape(label)}${e.elementHref ? '<br><span class="id">→ ' + escape(pathOf(e.elementHref)) + '</span>' : ''}</td>
+              <td class="mono sel"><div class="truncate" title="${escape(e.elementSelector)}">${escape(e.elementSelector)}</div></td>
+              <td><div class="truncate" title="${escape(e.elementText)}">${escape(e.elementText ?? '—')}</div></td>
+              <td class="mono dim"><div class="truncate" title="${escape(e.url)}">${escape(pathOf(e.url))}</div></td>
+              <td class="id">${shortId(e.anonymousId)}</td>
+              <td class="id">${shortId(e.sessionId)}</td>
+            </tr>`;
+          })
+          .join('');
+
+        seen = new Set(events.map((e) => e.id));
+        firstRender = false;
+      }
+
+      async function poll() {
+        if (!running) return;
+
+        const host = hostInput.value.trim().replace(/\/+$/, '');
+        const projectId = projectInput.value.trim();
+
+        if (!host || !projectId) {
+          setStatus('Paste a project id to start polling.');
+          return schedule();
+        }
+
+        try {
+          const url = `${host}/v1/events/recent?projectId=${encodeURIComponent(projectId)}&limit=${LIMIT}`;
+          const res = await fetch(url);
+
+          if (!res.ok) {
+            // 400 means a malformed cursor or an out-of-range limit.
+            setStatus(`${res.status} ${res.statusText} — ${await res.text()}`, true);
+            return schedule();
+          }
+
+          const { events } = await res.json();
+          renderStats(events);
+          renderRows(events);
+
+          if (events.length === 0 && !looksLikeUuid(projectId)) {
+            setStatus(`no events — "${projectId}" is not a uuid, so the feed is empty rather than an error`, true);
+          } else {
+            setStatus(`${events.length} newest events · updated ${new Date().toLocaleTimeString()}`);
+          }
+        } catch (err) {
+          // Network error or a CORS rejection — the API is usually just not running.
+          setStatus(`cannot reach ${host} — is the API running? (${err.message})`, true);
+        }
+
+        schedule();
+      }
+
+      const schedule = () => setTimeout(poll, POLL_MS);
+      poll();
+    </script>
+  </body>
+</html>

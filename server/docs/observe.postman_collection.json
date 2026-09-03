@@ -1,0 +1,451 @@
+{
+  "info": {
+    "name": "observe API",
+    "description": "Product-analytics API for **observe**.\n\nTwo surfaces:\n\n- **Public ingestion** — `POST /v1/events`, authenticated by the project API key in the request body. CORS is open here so any website running the SDK can post to it.\n- **Dashboard reads** — `/api/projects`, `/v1/events/recent`, `/v1/stats`. No auth yet (JWT lands in Phase 7), and CORS is deliberately *not* enabled on them.\n\n### Getting started\n\n1. Run the server (`pnpm start:dev` in `server/`, port 3000).\n2. Send **Projects → Create project**. Its test script saves `projectId` and `apiKey` into the collection variables automatically — the plaintext key is shown **once** and is unrecoverable afterwards (only its SHA-256 digest is stored).\n3. Send **Events → Ingest events**, then read the data back with **Recent events** and **Project stats**.\n\n### Validation\n\nA global `ValidationPipe` with `whitelist: true` strips any property that has no decorator on the DTO, and rejects bad input with `400`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Server origin. Port comes from PORT, defaulting to 3000."
+    },
+    {
+      "key": "projectId",
+      "value": "",
+      "type": "string",
+      "description": "UUID v7 of the project. Filled in automatically by Create project."
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string",
+      "description": "Plaintext obs_<random> key. Filled in automatically by Create project; never retrievable again."
+    },
+    {
+      "key": "cursor",
+      "value": "",
+      "type": "string",
+      "description": "Keyset cursor for the recent-events feed (the nextCursor of the previous page)."
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Liveness probe. No auth, no dependencies — it does not touch Postgres or Redis.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Returns `200` with a fixed status object and the server's current time.\n\nNo request body or query parameters."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\",\n  \"timestamp\": \"2026-08-31T09:14:02.113Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "description": "Project management. A project is a tenant: every event belongs to exactly one, and the project's API key is what authenticates ingestion.\n\nKeys are stored as SHA-256 hex digests — a deterministic hash rather than bcrypt, so that looking a project up by key stays a single indexed query. The plaintext is returned only in the `201` from Create project.",
+      "item": [
+        {
+          "name": "Create project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Save the id and the one-time plaintext key for the rest of the collection.",
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('projectId', body.id);",
+                  "  pm.collectionVariables.set('apiKey', body.apiKey);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Marketing Site\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects"]
+            },
+            "description": "Creates a project and mints its API key. Responds `201`.\n\n**Body**\n\n| Field | Type | Required | Rules |\n|---|---|---|---|\n| `name` | string | yes | Trimmed first, then must be non-empty and at most 100 characters. |\n\n```json\n{\n  \"name\": \"Acme Marketing Site\"\n}\n```\n\nThe response is the **only** place the plaintext `apiKey` ever appears — store it immediately. This request's test script copies it into the `apiKey` collection variable."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Acme Marketing Site\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": \"0198c2f1-9a7e-7c3d-8f21-4b6f0a5d9e33\",\n  \"name\": \"Acme Marketing Site\",\n  \"apiKey\": \"obs_7f3c1d92a4b85e6079fd2c1a8b4e5d60\",\n  \"createdAt\": \"2026-08-31T09:14:02.113Z\"\n}"
+            },
+            {
+              "name": "400 Bad Request — empty name",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"   \"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": [\n    \"name should not be empty\"\n  ],\n  \"error\": \"Bad Request\",\n  \"statusCode\": 400\n}"
+            }
+          ]
+        },
+        {
+          "name": "List projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "projects"]
+            },
+            "description": "Lists every project, newest state as stored. Responds `200` with an array.\n\nNo request body or query parameters. No key field is returned: hashes are useless to a client and the plaintext is unrecoverable."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/projects",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "projects"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": \"0198c2f1-9a7e-7c3d-8f21-4b6f0a5d9e33\",\n    \"name\": \"Acme Marketing Site\",\n    \"createdAt\": \"2026-08-31T09:14:02.113Z\"\n  },\n  {\n    \"id\": \"0198c2f4-11b0-7a49-9d7c-2e8a0f5c1b74\",\n    \"name\": \"Acme Docs\",\n    \"createdAt\": \"2026-08-31T09:20:47.882Z\"\n  }\n]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "description": "Click-event ingestion and the raw-event feed.\n\nIngestion is the public endpoint the browser SDK calls; the feed is a dashboard read.",
+      "item": [
+        {
+          "name": "Ingest events",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"events\": [\n    {\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"pageTitle\": \"Pricing — Acme\",\n      \"elementTag\": \"button\",\n      \"elementId\": \"cta-start-trial\",\n      \"elementText\": \"Start free trial\",\n      \"elementSelector\": \"main > section.hero > button#cta-start-trial\",\n      \"elementHref\": null,\n      \"timestamp\": \"2026-08-31T09:22:14.507Z\"\n    },\n    {\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"pageTitle\": \"Pricing — Acme\",\n      \"elementTag\": \"a\",\n      \"elementText\": \"Read the docs\",\n      \"elementSelector\": \"footer > nav > a:nth-child(2)\",\n      \"elementHref\": \"https://acme.example/docs\",\n      \"timestamp\": \"2026-08-31T09:22:31.044Z\"\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "events"]
+            },
+            "description": "Accepts a batch of click events. Responds `202 Accepted` with an **empty body** — the SDK fires and forgets.\n\nThis is the only endpoint with CORS enabled, and the only one authenticated: the `apiKey` in the body *is* the identity. There is no `projectId` field — the server stamps the project resolved from the key and ignores anything a client might claim.\n\n**Body**\n\n| Field | Type | Required | Rules |\n|---|---|---|---|\n| `apiKey` | string | yes | Non-empty, max 128 chars. The plaintext `obs_…` key. |\n| `events` | array | yes | 1–100 items. |\n\nEach item of `events`:\n\n| Field | Type | Required | Rules |\n|---|---|---|---|\n| `anonymousId` | string | yes | Non-empty, max 64. Stable per browser. |\n| `sessionId` | string | yes | Non-empty, max 64. |\n| `url` | string | yes | Valid URL, max 2048. `require_tld: false`, so `http://localhost:4173/...` is accepted. |\n| `pageTitle` | string | no | Max 512. |\n| `elementTag` | string | yes | Non-empty, max 32 (e.g. `button`, `a`). |\n| `elementId` | string | no | Max 255. |\n| `elementText` | string | no | Max 255. |\n| `elementSelector` | string | yes | Non-empty, max 1024. |\n| `elementHref` | string | no | Max 2048. |\n| `timestamp` | string | yes | ISO 8601. The **client-side** click time; the server records its own receive time separately. |\n\nEvery string is length-capped because this endpoint is public — uncapped, one 100-event batch could carry megabytes into storage.\n\n```json\n{\n  \"apiKey\": \"obs_7f3c1d92a4b85e6079fd2c1a8b4e5d60\",\n  \"events\": [\n    {\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"pageTitle\": \"Pricing — Acme\",\n      \"elementTag\": \"button\",\n      \"elementId\": \"cta-start-trial\",\n      \"elementText\": \"Start free trial\",\n      \"elementSelector\": \"main > section.hero > button#cta-start-trial\",\n      \"timestamp\": \"2026-08-31T09:22:14.507Z\"\n    }\n  ]\n}\n```\n\nAn unknown key returns `401`; a malformed batch returns `400`."
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"events\": [\n    {\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"elementTag\": \"button\",\n      \"elementSelector\": \"main > section.hero > button#cta-start-trial\",\n      \"timestamp\": \"2026-08-31T09:22:14.507Z\"\n    }\n  ]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/events",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "events"]
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            },
+            {
+              "name": "401 Unauthorized — unknown key",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"obs_not_a_real_key\",\n  \"events\": [\n    {\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"elementTag\": \"button\",\n      \"elementSelector\": \"button#cta\",\n      \"timestamp\": \"2026-08-31T09:22:14.507Z\"\n    }\n  ]\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/events",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "events"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": \"invalid API key\",\n  \"error\": \"Unauthorized\",\n  \"statusCode\": 401\n}"
+            },
+            {
+              "name": "400 Bad Request — empty batch",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"apiKey\": \"{{apiKey}}\",\n  \"events\": []\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/v1/events",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "events"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": [\n    \"events must contain at least 1 elements\"\n  ],\n  \"error\": \"Bad Request\",\n  \"statusCode\": 400\n}"
+            }
+          ]
+        },
+        {
+          "name": "Recent events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Carry the keyset cursor forward so re-sending walks to the next page.",
+                  "if (pm.response.code === 200) {",
+                  "  const { nextCursor } = pm.response.json();",
+                  "  pm.collectionVariables.set('cursor', nextCursor ?? '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/events/recent?projectId={{projectId}}&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "events", "recent"],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}",
+                  "description": "Required. The project whose feed to read."
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Optional integer, 1–100. Defaults to 50."
+                },
+                {
+                  "key": "cursor",
+                  "value": "{{cursor}}",
+                  "description": "Optional UUID. The nextCursor from the previous page; omit for the first page.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Newest-first feed of raw click events. Responds `200`.\n\nNo request body — everything is a query parameter.\n\n| Param | Type | Required | Rules |\n|---|---|---|---|\n| `projectId` | string | yes | Non-empty. |\n| `limit` | integer | no | 1–100, defaults to **50**. Arrives as a string and is coerced before the numeric checks. |\n| `cursor` | string | no | Must be a UUID; a garbage cursor is rejected with `400` rather than falling through to a silent full scan. |\n\n**Pagination** is keyset, not offset. Event ids are UUID v7 — time-ordered and unique — so ordering by `id DESC` gives a newest-first feed and `WHERE id < cursor` gives a stable next page that never drifts as new events arrive. Omit `cursor` for the first page, then pass back the previous response's `nextCursor`; it is `null` on the last page. This request's test script stores `nextCursor` in the `cursor` variable — enable the disabled `cursor` param to page through."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/events/recent?projectId={{projectId}}&limit=2",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "events", "recent"],
+                  "query": [
+                    { "key": "projectId", "value": "{{projectId}}" },
+                    { "key": "limit", "value": "2" }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"events\": [\n    {\n      \"id\": \"0198c30a-4d21-7b6e-91af-0c2d7e4f8a15\",\n      \"projectId\": \"0198c2f1-9a7e-7c3d-8f21-4b6f0a5d9e33\",\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"pageTitle\": \"Pricing — Acme\",\n      \"elementTag\": \"a\",\n      \"elementText\": \"Read the docs\",\n      \"elementSelector\": \"footer > nav > a:nth-child(2)\",\n      \"elementHref\": \"https://acme.example/docs\",\n      \"timestamp\": \"2026-08-31T09:22:31.044Z\"\n    },\n    {\n      \"id\": \"0198c30a-1f88-7042-b3cc-5a9e10d6b7e4\",\n      \"projectId\": \"0198c2f1-9a7e-7c3d-8f21-4b6f0a5d9e33\",\n      \"anonymousId\": \"anon_5f2c9d1b7a4e\",\n      \"sessionId\": \"sess_8e1a3c7d90b2\",\n      \"url\": \"https://acme.example/pricing\",\n      \"pageTitle\": \"Pricing — Acme\",\n      \"elementTag\": \"button\",\n      \"elementId\": \"cta-start-trial\",\n      \"elementText\": \"Start free trial\",\n      \"elementSelector\": \"main > section.hero > button#cta-start-trial\",\n      \"timestamp\": \"2026-08-31T09:22:14.507Z\"\n    }\n  ],\n  \"nextCursor\": \"0198c30a-1f88-7042-b3cc-5a9e10d6b7e4\"\n}"
+            },
+            {
+              "name": "400 Bad Request — malformed cursor",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/events/recent?projectId={{projectId}}&cursor=abc",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "events", "recent"],
+                  "query": [
+                    { "key": "projectId", "value": "{{projectId}}" },
+                    { "key": "cursor", "value": "abc" }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": [\n    \"cursor must be a UUID\"\n  ],\n  \"error\": \"Bad Request\",\n  \"statusCode\": 400\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "description": "Aggregate analytics over a project's events.",
+      "item": [
+        {
+          "name": "Project stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/stats?projectId={{projectId}}&from=2026-08-01T00:00:00.000Z&to=2026-09-01T00:00:00.000Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "stats"],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}",
+                  "description": "Required. The project to aggregate."
+                },
+                {
+                  "key": "from",
+                  "value": "2026-08-01T00:00:00.000Z",
+                  "description": "Required ISO 8601. Inclusive start of the range."
+                },
+                {
+                  "key": "to",
+                  "value": "2026-09-01T00:00:00.000Z",
+                  "description": "Required ISO 8601. Exclusive end of the range."
+                }
+              ]
+            },
+            "description": "Totals, a daily time series, and top-10 elements and pages for one project over one time range. Responds `200`.\n\nNo request body — everything is a query parameter.\n\n| Param | Type | Required | Rules |\n|---|---|---|---|\n| `projectId` | string | yes | Non-empty. |\n| `from` | string | yes | ISO 8601. **Inclusive** start. |\n| `to` | string | yes | ISO 8601. **Exclusive** end. |\n\nThe range is half-open `[from, to)` so adjacent ranges — and the day buckets inside one — never double-count a boundary timestamp.\n\n**Response shape**\n\n- `totals` — `events`, `uniqueVisitors` (distinct `anonymousId`), `sessions` (distinct `sessionId`).\n- `eventsPerDay` — one `{ day, count }` per day; `day` is a UTC date-only `YYYY-MM-DD` string.\n- `topElements` — up to 10 `{ selector, count }`, most-clicked first.\n- `topPages` — up to 10 `{ url, count }`, most-clicked first.\n\nThe four reads run concurrently server-side. The top-N limit is fixed at 10; it is not yet exposed as a query parameter, and the validation pipe's `whitelist` strips any extra parameter you send."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/stats?projectId={{projectId}}&from=2026-08-01T00:00:00.000Z&to=2026-09-01T00:00:00.000Z",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "stats"],
+                  "query": [
+                    { "key": "projectId", "value": "{{projectId}}" },
+                    { "key": "from", "value": "2026-08-01T00:00:00.000Z" },
+                    { "key": "to", "value": "2026-09-01T00:00:00.000Z" }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"totals\": {\n    \"events\": 1284,\n    \"uniqueVisitors\": 317,\n    \"sessions\": 402\n  },\n  \"eventsPerDay\": [\n    { \"day\": \"2026-08-29\", \"count\": 41 },\n    { \"day\": \"2026-08-30\", \"count\": 58 },\n    { \"day\": \"2026-08-31\", \"count\": 33 }\n  ],\n  \"topElements\": [\n    { \"selector\": \"main > section.hero > button#cta-start-trial\", \"count\": 212 },\n    { \"selector\": \"footer > nav > a:nth-child(2)\", \"count\": 96 }\n  ],\n  \"topPages\": [\n    { \"url\": \"https://acme.example/pricing\", \"count\": 508 },\n    { \"url\": \"https://acme.example/\", \"count\": 431 }\n  ]\n}"
+            },
+            {
+              "name": "400 Bad Request — missing range",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/stats?projectId={{projectId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["v1", "stats"],
+                  "query": [{ "key": "projectId", "value": "{{projectId}}" }]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"message\": [\n    \"from must be a valid ISO 8601 date string\",\n    \"to must be a valid ISO 8601 date string\"\n  ],\n  \"error\": \"Bad Request\",\n  \"statusCode\": 400\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

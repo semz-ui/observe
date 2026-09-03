@@ -18,7 +18,9 @@ This is a **learning project**: Michael writes the code himself; Claude explains
 - `typescript-sdk/` — `@observe/sdk`, the script websites install to auto-capture
   clicks. Standalone package with its own pnpm lockfile, **not** a workspace with
   `server/` (see its README)
-- `dashboard/` (planned) — React + Vite + TanStack Query + Recharts UI
+- `dashboard/` (planned) — Next.js (App Router) + shadcn/ui + TanStack Query +
+  Recharts UI. Modular monolith with MVVM inside each module; reads go through
+  Next's server side, since the API only sends CORS headers on `/v1/events`
 
 The roadmap with per-phase deliverables and "definition of done" lives in `server/docs/plan.md` (Phases 0–6 done, plus Phase 8's Redis infrastructure pulled forward; next is Phase 7: authentication). Multi-tenancy is per-project API keys (`obs_<random>`), stored as SHA-256 digests (plaintext shown once at creation; lookups hash first — deterministic hash, not bcrypt, so `findByApiKey` stays an indexed lookup); the public ingestion endpoint will be `POST /v1/events`, authenticated by API key only, while dashboard endpoints get JWT auth in a later phase.
 

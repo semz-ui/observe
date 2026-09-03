@@ -42,6 +42,11 @@
       <li>Enterprise</li>
     </ul>
 
+    <p class="hint">
+      Open the <a href="./viewer.html">event viewer</a> in a second tab to watch
+      these clicks come back out of the API.
+    </p>
+
     <h2>What the SDK is doing</h2>
     <p class="hint">
       The queue flushes every 3 s or every 5 clicks (tightened from the 5 s / 20
@@ -75,19 +80,24 @@
         }
       };
 
+      const isIngest = (target) => String(target).endsWith('/v1/events');
+
       const realFetch = window.fetch.bind(window);
       window.fetch = (url, options = {}) => {
-        if (String(url).endsWith('/v1/events')) write(`POST → ${describe(options.body)}`);
+        if (!isIngest(url)) return realFetch(url, options);
+
+        write(`POST → ${describe(options.body)}`);
         return realFetch(url, options).then((res) => {
-          if (String(url).endsWith('/v1/events')) write(`  ↳ ${res.status} ${res.statusText}`);
+          write(`  ↳ ${res.status} ${res.statusText}`);
           return res;
         });
       };
 
-      const realBeacon = navigator.sendBeacon.bind(navigator);
-      navigator.sendBeacon = (url, blob) => {
-        write('beacon → page hiding, flushing the tail');
-        return realBeacon(url, blob);
+      // Refusing the beacon makes the SDK fall back to its keepalive fetch
+      // (transport.ts), so the tail batch shows up in the log above too.
+      navigator.sendBeacon = () => {
+        write('beacon → page hiding, flushing the tail via fetch');
+        return false;
       };
     </script>
   </body>

@@ -10,8 +10,9 @@ on with a broken checkpoint.
 
 **Stack:** NestJS (modular monolith + clean architecture, see
 [ARCHITECTURE.md](../ARCHITECTURE.md)) · Prisma · Postgres 16 (Docker, port
-5433) · Redis 7 · pnpm workspaces · React + Vite dashboard · TypeScript
-everywhere.
+5433) · Redis 7 · Next.js dashboard · TypeScript everywhere. Each package
+installs independently — `server/`, `typescript-sdk/` and `dashboard/` have
+their own lockfiles; there is no root workspace.
 
 ---
 
@@ -228,7 +229,10 @@ hammering ingestion returns 429; a cached API key skips the DB round trip.
 
 **Goal:** the website where you actually *see* the clicks.
 
-- [ ] `dashboard/` — React + Vite + TypeScript, TanStack Query, Recharts
+- [ ] `dashboard/` — Next.js (App Router) + TypeScript, shadcn/ui + Tailwind,
+      TanStack Query, Recharts. Modular monolith + MVVM — broken into
+      milestones M0–M7, one doc each, starting at
+      [phase-9-dashboard.md](phase-9-dashboard.md)
 - [ ] Login page (JWT from Phase 7)
 - [ ] Projects list + create flow (shows API key + copy-paste install snippet
       **once, at creation** — hashed storage means it can't be shown again)
