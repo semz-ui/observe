@@ -60,6 +60,7 @@ pnpm dev         # next dev on :3001 — 3000 is the API, 4173 is the SDK demo
 pnpm build       # next build (also the full type-check)
 pnpm lint        # eslint, non-fixing — same flat config as server/
 pnpm typecheck   # next typegen && tsc --noEmit
+pnpm test        # vitest run (src/**/*.spec.ts); pnpm test:watch to iterate
 ```
 
 `next typegen` is not optional: `LayoutProps`/`PageProps` are generated into

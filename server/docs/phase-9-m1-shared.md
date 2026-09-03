@@ -65,6 +65,18 @@ Two things about the setup, because the CLI's defaults fight this layout:
   semicolon-less, so run `pnpm exec prettier --write "src/shared/**/*.{ts,tsx}"`
   after adding any.
 
+### Tests
+
+vitest, same major as the SDK, but node rather than jsdom — `shared/api` has no DOM.
+Two things bite on the way in, both recorded in `vitest.config.mts`:
+
+- `import 'server-only'` throws on import under every export condition but
+  `react-server`, and the key that governs is **`ssr.resolve.conditions`**, not the
+  top-level `resolve.conditions` — vitest runs node tests through Vite's SSR pipeline.
+- **`.env.local` never reaches `process.env` under vitest**, so `baseUrl()` throws
+  before a test asserts anything. Stub `OBSERVE_API_URL` per test; `unstubEnvs: true`
+  restores it.
+
 ---
 
 ## Decisions taken
