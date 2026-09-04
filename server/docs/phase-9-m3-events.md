@@ -58,9 +58,12 @@ answers "what does this table show" and has the new-row flash affordance
 
 ## Decisions taken
 
-- **Poll every 5s, and only while the tab is visible.** TanStack's
+- **Poll every 5s by default, and only while the tab is visible.** TanStack's
   `refetchIntervalInBackground` already defaults to false, so a hidden tab stops on its
-  own — no visibility listener. A pause toggle stops it outright.
+  own — no visibility listener. A pause toggle stops it outright, and the reader can
+  pick 2s / 5s / 15s / 60s. Both are preferences rather than view state — they outlive
+  the screen — so they live in a persisted zustand store, not a `useState` that resets
+  on every navigation.
 - **Two queries, not one.** The infinite query owns the cursor walk and is never
   refetched: walking a keyset backwards is a one-way trip, and refetching it would cost
   one request per loaded page. A second query polls the head, and `mergeEvents`

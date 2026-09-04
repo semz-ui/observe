@@ -4,14 +4,17 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  useFeedPreferences,
+  type PollIntervalMs,
+} from '@/shared/store/feed-preferences';
+
+import {
   EVENTS_PAGE_SIZE,
   type ClickEvent,
   type RecentEventsPage,
 } from '../domain/event';
 import { fetchRecentEvents } from '../infrastructure/events.client';
 import { mergeEvents } from './merge-events';
-
-export const POLL_INTERVAL_MS = 5_000;
 
 export interface EventsFeedViewState {
   readonly rows: readonly ClickEvent[];
@@ -20,12 +23,14 @@ export interface EventsFeedViewState {
   readonly isEmpty: boolean;
   readonly isLoading: boolean;
   readonly isPaused: boolean;
+  readonly pollIntervalMs: PollIntervalMs;
   readonly isFetchingNewer: boolean;
   readonly canLoadMore: boolean;
   readonly isLoadingMore: boolean;
   readonly hasGap: boolean;
   readonly errorMessage: string | null;
   readonly togglePause: () => void;
+  readonly setPollInterval: (pollIntervalMs: PollIntervalMs) => void;
   readonly loadMore: () => void;
 }
 
@@ -47,7 +52,14 @@ export function useEventsFeedViewModel({
   projectId: string;
   initialPage: RecentEventsPage;
 }): EventsFeedViewState {
-  const [isPaused, setIsPaused] = useState(false);
+  // Pause and interval are preferences, not view state: they outlive this
+  // screen and follow the reader between projects, so they live in the store
+  // rather than in a useState that resets on every navigation.
+  const isPaused = useFeedPreferences((state) => state.isPaused);
+  const pollIntervalMs = useFeedPreferences((state) => state.pollIntervalMs);
+  const togglePause = useFeedPreferences((state) => state.togglePause);
+  const setPollInterval = useFeedPreferences((state) => state.setPollInterval);
+
   const [newIds, setNewIds] = useState<ReadonlySet<string>>(new Set());
 
   const pages = useInfiniteQuery({
@@ -72,7 +84,7 @@ export function useEventsFeedViewModel({
     initialData: initialPage,
     // `refetchIntervalInBackground` defaults to false, so a hidden tab stops
     // polling on its own — no visibility listener needed here.
-    refetchInterval: isPaused ? false : POLL_INTERVAL_MS,
+    refetchInterval: isPaused ? false : pollIntervalMs,
   });
 
   const walked = useMemo(
@@ -98,10 +110,6 @@ export function useEventsFeedViewModel({
     setNewIds(new Set(fresh));
   }, [rows]);
 
-  const togglePause = useCallback(() => {
-    setIsPaused((paused) => !paused);
-  }, []);
-
   const loadMore = useCallback(() => {
     void pages.fetchNextPage();
   }, [pages]);
@@ -114,12 +122,14 @@ export function useEventsFeedViewModel({
     isEmpty: rows.length === 0,
     isLoading: pages.isPending,
     isPaused,
+    pollIntervalMs,
     isFetchingNewer: head.isFetching,
     canLoadMore: pages.hasNextPage,
     isLoadingMore: pages.isFetchingNextPage,
     hasGap,
     errorMessage: failure === null ? null : failure.message,
     togglePause,
+    setPollInterval,
     loadMore,
   };
 }
