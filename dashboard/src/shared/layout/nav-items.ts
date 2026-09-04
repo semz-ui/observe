@@ -15,7 +15,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { label: 'Projects', href: null, icon: FolderKanban, milestone: 'M2' },
+  { label: 'Projects', href: '/projects', icon: FolderKanban, milestone: 'M2' },
   { label: 'Events', href: null, icon: List, milestone: 'M3' },
   { label: 'Overview', href: null, icon: BarChart3, milestone: 'M4' },
 ];

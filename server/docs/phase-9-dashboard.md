@@ -87,6 +87,11 @@ The rule that makes this enforceable: **if a component imports anything from
 `infrastructure/`, the ViewModel is missing.** Same spirit as the server's
 dependency rule.
 
+**When does a ViewModel exist?** (Decided in M2, and every module after follows it.)
+The moment a screen owns client state. A Server Component doing a static read calls
+`infrastructure/` directly and passes props down — no ViewModel, because there would be
+nothing in it. So `/projects` has none and the project switcher does.
+
 The module boundary rule carries over too: cross-module imports go through
 `modules/<name>/index.ts`, never deep into another module's folders.
 

@@ -46,18 +46,20 @@ with something clever.
 
 ---
 
-## Decisions for you
+## Decisions taken
 
-- **Server Component or Client Component + ViewModel?** Static data argues for a plain
-  Server Component with no ViewModel at all; consistency with M3 argues for the
-  ViewModel from the start. Pick a rule — "a ViewModel exists when there is client
-  state, otherwise the Server Component fetches directly" is a defensible one — and
-  write it into the overview doc.
-- **Project scope in the URL or a global store?** URL (`/projects/[projectId]/…`) is
-  recommended: shareable links, and it survives refresh for free without any state
-  library.
-- **What the switcher does when there are zero projects** — empty state, or route
-  straight to the M5 create flow?
+- **A ViewModel exists the moment a screen owns client state; a static read skips it.**
+  `/projects` is a plain Server Component that calls `listProjects()` and hands the
+  result to a presentational component. The switcher gets a ViewModel because it
+  genuinely has state to own — which project the URL is scoped to, and what selecting
+  one does. TanStack Query waits until M3, where polling is the thing that needs it.
+- **Project scope lives in the URL** (`/projects/[projectId]/…`): shareable links, and
+  it survives a refresh with no state library. `useParams` reads the matched segment
+  even from the header, which renders above that segment.
+- **Zero projects gets an empty state**, not a jump into a create flow that does not
+  exist until M5.
+- **Menu open/closed is not in the ViewModel.** It belongs to the primitive. A
+  ViewModel that mirrors a component's internal state is ceremony, not layering.
 
 ---
 
