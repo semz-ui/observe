@@ -52,6 +52,22 @@ pnpm demo        # build, then serve examples/demo-site on :4173
 
 CI for it is `.github/workflows/sdk-ci.yml`, path-filtered to `typescript-sdk/**`.
 
+Dashboard work happens in `dashboard/` (its own install again; Next 16 + React 19
++ Tailwind 4):
+
+```bash
+pnpm dev         # next dev on :3001 — 3000 is the API, 4173 is the SDK demo
+pnpm build       # next build (also the full type-check)
+pnpm lint        # eslint, non-fixing — same flat config as server/
+pnpm typecheck   # next typegen && tsc --noEmit
+pnpm test        # vitest run (src/**/*.spec.ts); pnpm test:watch to iterate
+```
+
+`next typegen` is not optional: `LayoutProps`/`PageProps` are generated into
+`.next/types`, so a bare `tsc --noEmit` on a clean checkout fails to resolve
+them. `next dev` also rewrites `dashboard/AGENTS.md` on every run — it is
+committed so the tree stays clean.
+
 ## Architecture: modular monolith + clean architecture
 
 Full explanation in `server/ARCHITECTURE.md`. The short version future work must respect:
