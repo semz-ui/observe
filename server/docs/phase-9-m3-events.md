@@ -56,19 +56,38 @@ answers "what does this table show" and has the new-row flash affordance
 
 ---
 
-## Decisions for you
+## Decisions taken
 
-- **Poll interval**, and whether it backs off or stops when the tab is hidden.
-- **How new rows arrive.** Prepend on poll so the feed grows upward, or refetch page 1?
-  Prepending reads better but has to de-duplicate against what the cursor already
-  fetched — the event `id` is a uuid v7, so it sorts by time and makes this tractable.
-- **Which of the twelve event fields earn a column**, and what goes in a detail drawer.
-  The full set: `id, projectId, anonymousId, sessionId, url, pageTitle?, elementTag,
-  elementId?, elementText?, elementSelector, elementHref?, timestamp`.
-- **Filters.** The API supports none beyond `projectId` — no url, selector, or session
-  filter. Client-side filtering of the loaded page is easy but misleading (it only
-  filters what you've fetched). Either skip filters this milestone or add the server
-  support first.
+- **Poll every 5s by default, and only while the tab is visible.** TanStack's
+  `refetchIntervalInBackground` already defaults to false, so a hidden tab stops on its
+  own — no visibility listener. A pause toggle stops it outright, and the reader can
+  pick 2s / 5s / 15s / 60s. Both are preferences rather than view state — they outlive
+  the screen — so they live in a persisted zustand store, not a `useState` that resets
+  on every navigation.
+- **Two queries, not one.** The infinite query owns the cursor walk and is never
+  refetched: walking a keyset backwards is a one-way trip, and refetching it would cost
+  one request per loaded page. A second query polls the head, and `mergeEvents`
+  reconciles the two by id. A tick is one request whether you are on page one or page
+  ten, and paging deeper never resets.
+- **The feed accumulates; it is not derived from the current windows.** Both queries only
+  ever report a window — the poll returns the newest page, the walk returns one older
+  page at a time — so an event that has scrolled out of the poll and was never reached by
+  the walk is in neither. Recomputing rows from "current head + walked pages" makes rows
+  that were on screen a minute ago vanish. `FeedState` keeps every event either query has
+  reported, for the life of the page.
+- **The gap case is surfaced, not hidden.** A polled page that shares *no* id with
+  anything seen so far can only mean more than a page arrived between two ticks, and the
+  events in between were never fetched by anything. The cursor only goes older, so
+  nothing will ever fill them in: `hasGap` is set, stays set, and the view says so.
+- **"New" means new to the poll, not new to the table.** `absorbHead` reports fresh ids;
+  `absorbPage` reports none. Otherwise "load more" would flash fifty historical rows as
+  though they had just been captured.
+- **Six columns** — when (UTC), element, text, selector, page, visitor — mirroring the
+  demo viewer, with all twelve fields in a details dialog. Times are sliced out of the
+  ISO string rather than formatted with `Intl`: the table is server-rendered for first
+  paint and hydrated in the browser, so a locale-aware format would differ between them.
+- **No filters.** The API supports none beyond `projectId`, and filtering only the rows
+  already fetched would look like a filter while lying about the result.
 
 ---
 

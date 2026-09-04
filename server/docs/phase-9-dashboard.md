@@ -87,6 +87,26 @@ The rule that makes this enforceable: **if a component imports anything from
 `infrastructure/`, the ViewModel is missing.** Same spirit as the server's
 dependency rule.
 
+**When does a ViewModel exist?** (Decided in M2, and every module after follows it.)
+The moment a screen owns client state. A Server Component doing a static read calls
+`infrastructure/` directly and passes props down — no ViewModel, because there would be
+nothing in it. So `/projects` has none and the project switcher does.
+
+**Where state lives.** Four homes, and the boundaries between them are what stop any one
+of them becoming a dumping ground:
+
+| Kind | Home | Example |
+| --- | --- | --- |
+| Server state | TanStack Query | projects, events, stats — a cache of someone else's data |
+| Addressable state | the URL | which project is in scope; a link worth sending |
+| Preferences | zustand (`shared/store/`, persisted) | feed pause, poll interval |
+| Ephemera | `useState` in the component | a menu being open, which row's dialog is showing |
+
+A preference earns the store by outliving the component that set it and following the
+reader between pages, while being something nobody wants in a link. A persisted store
+uses `skipHydration` and rehydrates after mount, so the first client render still matches
+what the server sent.
+
 The module boundary rule carries over too: cross-module imports go through
 `modules/<name>/index.ts`, never deep into another module's folders.
 

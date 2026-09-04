@@ -1,8 +1,24 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
+
+/* The new-row flash, ported from the SDK's demo viewer
+   (typescript-sdk/examples/demo-site/viewer.html:53-54). On a quiet feed it is
+   the only sign that polling is still alive. */
+@theme {
+  --animate-flash: flash 1.6s ease-out;
+
+  @keyframes flash {
+    from {
+      background-color: color-mix(in oklch, var(--primary) 16%, transparent);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+}
 
 @theme inline {
   --color-background: var(--background);
