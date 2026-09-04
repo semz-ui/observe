@@ -25,6 +25,7 @@ export function AppSidebar(): React.ReactElement {
             milestone,
             available,
             requiresProject,
+            matchesDescendants,
           } = item;
           const href = item.href(projectId);
 
@@ -57,7 +58,9 @@ export function AppSidebar(): React.ReactElement {
             );
           }
 
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          const isActive =
+            pathname === href ||
+            (matchesDescendants && pathname.startsWith(`${href}/`));
 
           return (
             <Link

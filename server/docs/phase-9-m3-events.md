@@ -69,10 +69,19 @@ answers "what does this table show" and has the new-row flash affordance
   one request per loaded page. A second query polls the head, and `mergeEvents`
   reconciles the two by id. A tick is one request whether you are on page one or page
   ten, and paging deeper never resets.
-- **The gap case is surfaced, not hidden.** If more than a page arrives between ticks,
-  the polled head and the walked pages share no id, and the rows between them were never
-  fetched — the cursor only goes older, so nothing will ever fill them in. `mergeEvents`
-  returns `hasGap` and the view says so.
+- **The feed accumulates; it is not derived from the current windows.** Both queries only
+  ever report a window — the poll returns the newest page, the walk returns one older
+  page at a time — so an event that has scrolled out of the poll and was never reached by
+  the walk is in neither. Recomputing rows from "current head + walked pages" makes rows
+  that were on screen a minute ago vanish. `FeedState` keeps every event either query has
+  reported, for the life of the page.
+- **The gap case is surfaced, not hidden.** A polled page that shares *no* id with
+  anything seen so far can only mean more than a page arrived between two ticks, and the
+  events in between were never fetched by anything. The cursor only goes older, so
+  nothing will ever fill them in: `hasGap` is set, stays set, and the view says so.
+- **"New" means new to the poll, not new to the table.** `absorbHead` reports fresh ids;
+  `absorbPage` reports none. Otherwise "load more" would flash fifty historical rows as
+  though they had just been captured.
 - **Six columns** — when (UTC), element, text, selector, page, visitor — mirroring the
   demo viewer, with all twelve fields in a details dialog. Times are sliced out of the
   ISO string rather than formatted with `Intl`: the table is server-rendered for first

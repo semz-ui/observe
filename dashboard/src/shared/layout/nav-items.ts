@@ -18,6 +18,12 @@ export interface NavItem {
   /** False while the milestone that builds this route is still ahead of us. */
   readonly available: boolean;
   readonly requiresProject: boolean;
+  /**
+   * Whether deeper paths still count as this item. False for Projects: its
+   * `/projects` is a prefix of every project-scoped route, so matching
+   * descendants would light it up alongside Events on `/projects/x/events`.
+   */
+  readonly matchesDescendants: boolean;
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -28,6 +34,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     milestone: 'M2',
     available: true,
     requiresProject: false,
+    matchesDescendants: false,
   },
   {
     label: 'Events',
@@ -37,6 +44,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     milestone: 'M3',
     available: true,
     requiresProject: true,
+    matchesDescendants: true,
   },
   {
     label: 'Overview',
@@ -45,5 +53,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
     milestone: 'M4',
     available: false,
     requiresProject: true,
+    matchesDescendants: true,
   },
 ];

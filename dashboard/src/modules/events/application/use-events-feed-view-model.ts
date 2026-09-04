@@ -14,7 +14,13 @@ import {
   type RecentEventsPage,
 } from '../domain/event';
 import { fetchRecentEvents } from '../infrastructure/events.client';
-import { mergeEvents } from './merge-events';
+import {
+  EMPTY_FEED,
+  absorbHead,
+  absorbPage,
+  feedRows,
+  type FeedState,
+} from './feed-state';
 
 export interface EventsFeedViewState {
   readonly rows: readonly ClickEvent[];
@@ -92,23 +98,36 @@ export function useEventsFeedViewModel({
     [pages.data],
   );
 
-  const { rows, hasGap } = useMemo(
-    () => mergeEvents(head.data.events, walked),
-    [head.data, walked],
+  // Held in a ref and mutated by the two effects below rather than derived on
+  // every render: the feed is the accumulation of every window either query has
+  // reported, and a `useMemo` over the current windows would drop whatever has
+  // scrolled out of both.
+  const seeded = useMemo<FeedState>(
+    () => absorbPage(EMPTY_FEED, initialPage.events),
+    [initialPage],
   );
+  const feed = useRef<FeedState>(seeded);
+  const [view, setView] = useState(() => ({
+    rows: feedRows(seeded),
+    hasGap: seeded.hasGap,
+  }));
 
-  // Everything on screen at mount counts as already seen, so the feed does not
-  // flash its whole first page at you.
-  const seen = useRef(new Set(rows.map((event) => event.id)));
+  const publish = useCallback(() => {
+    setView({ rows: feedRows(feed.current), hasGap: feed.current.hasGap });
+  }, []);
 
   useEffect(() => {
-    const fresh = rows
-      .filter((event) => !seen.current.has(event.id))
-      .map((event) => event.id);
-    if (fresh.length === 0) return;
-    for (const id of fresh) seen.current.add(id);
-    setNewIds(new Set(fresh));
-  }, [rows]);
+    const { state, freshIds } = absorbHead(feed.current, head.data.events);
+    feed.current = state;
+    publish();
+    // An empty set every tick would re-render the whole table to say nothing.
+    if (freshIds.length > 0) setNewIds(new Set(freshIds));
+  }, [head.data, publish]);
+
+  useEffect(() => {
+    feed.current = absorbPage(feed.current, walked);
+    publish();
+  }, [walked, publish]);
 
   const loadMore = useCallback(() => {
     void pages.fetchNextPage();
@@ -117,16 +136,16 @@ export function useEventsFeedViewModel({
   const failure = head.error ?? pages.error;
 
   return {
-    rows,
+    rows: view.rows,
     newIds,
-    isEmpty: rows.length === 0,
+    isEmpty: view.rows.length === 0,
     isLoading: pages.isPending,
     isPaused,
     pollIntervalMs,
     isFetchingNewer: head.isFetching,
     canLoadMore: pages.hasNextPage,
     isLoadingMore: pages.isFetchingNextPage,
-    hasGap,
+    hasGap: view.hasGap,
     errorMessage: failure === null ? null : failure.message,
     togglePause,
     setPollInterval,

@@ -32,11 +32,23 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json(page);
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    // Pass the API's own status through, except for "no API at all", which is
-    // this server's problem to report rather than a status the client can act on.
+
+    if (error.isUnreachable) {
+      // The unreachable message names OBSERVE_API_URL, which is an internal
+      // address the browser has no business learning. It goes to the server log
+      // instead; the client gets a status it can act on and nothing else.
+      console.error('observe API unreachable', error);
+      return NextResponse.json(
+        { message: 'the events API is unavailable' },
+        { status: 502 },
+      );
+    }
+
+    // A real 4xx/5xx came from the API, so its own message is both safe and
+    // more useful than anything this handler could invent.
     return NextResponse.json(
       { message: error.message },
-      { status: error.isUnreachable ? 502 : error.status },
+      { status: error.status },
     );
   }
 }
