@@ -56,19 +56,26 @@ answers "what does this table show" and has the new-row flash affordance
 
 ---
 
-## Decisions for you
+## Decisions taken
 
-- **Poll interval**, and whether it backs off or stops when the tab is hidden.
-- **How new rows arrive.** Prepend on poll so the feed grows upward, or refetch page 1?
-  Prepending reads better but has to de-duplicate against what the cursor already
-  fetched — the event `id` is a uuid v7, so it sorts by time and makes this tractable.
-- **Which of the twelve event fields earn a column**, and what goes in a detail drawer.
-  The full set: `id, projectId, anonymousId, sessionId, url, pageTitle?, elementTag,
-  elementId?, elementText?, elementSelector, elementHref?, timestamp`.
-- **Filters.** The API supports none beyond `projectId` — no url, selector, or session
-  filter. Client-side filtering of the loaded page is easy but misleading (it only
-  filters what you've fetched). Either skip filters this milestone or add the server
-  support first.
+- **Poll every 5s, and only while the tab is visible.** TanStack's
+  `refetchIntervalInBackground` already defaults to false, so a hidden tab stops on its
+  own — no visibility listener. A pause toggle stops it outright.
+- **Two queries, not one.** The infinite query owns the cursor walk and is never
+  refetched: walking a keyset backwards is a one-way trip, and refetching it would cost
+  one request per loaded page. A second query polls the head, and `mergeEvents`
+  reconciles the two by id. A tick is one request whether you are on page one or page
+  ten, and paging deeper never resets.
+- **The gap case is surfaced, not hidden.** If more than a page arrives between ticks,
+  the polled head and the walked pages share no id, and the rows between them were never
+  fetched — the cursor only goes older, so nothing will ever fill them in. `mergeEvents`
+  returns `hasGap` and the view says so.
+- **Six columns** — when (UTC), element, text, selector, page, visitor — mirroring the
+  demo viewer, with all twelve fields in a details dialog. Times are sliced out of the
+  ISO string rather than formatted with `Intl`: the table is server-rendered for first
+  paint and hydrated in the browser, so a locale-aware format would differ between them.
+- **No filters.** The API supports none beyond `projectId`, and filtering only the rows
+  already fetched would look like a filter while lying about the result.
 
 ---
 

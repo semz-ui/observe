@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { findProject } from '@/modules/projects';
@@ -23,14 +24,16 @@ export default async function ProjectPage({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="opacity-60">
-          <CardHeader>
-            <CardTitle>Events</CardTitle>
-            <CardDescription>
-              The live feed of captured clicks. Arrives in M3.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <Link href={`/projects/${project.id}/events`} className="rounded-xl">
+          <Card className="h-full transition-colors hover:border-ring">
+            <CardHeader>
+              <CardTitle>Events</CardTitle>
+              <CardDescription>
+                The live feed of captured clicks.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
         <Card className="opacity-60">
           <CardHeader>
             <CardTitle>Overview</CardTitle>
