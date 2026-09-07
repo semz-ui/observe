@@ -4,6 +4,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Data-viz series colour. The shadcn preset ships --chart-1..5 as greys
+   (oklch(... 0 0), chroma 0) and identical in both modes — a zero-chroma "hue"
+   reads as grey and fails the chroma floor, and an unchanged dark value is an
+   automatic flip rather than a step chosen for the dark surface. These two are
+   the validated sequential blue, stepped per mode, and checked against the card
+   surface in each (lightness band, chroma floor, >= 3:1 contrast). */
+:root {
+  --chart-series-1: #2a78d6;
+}
+
+.dark {
+  --chart-series-1: #3987e5;
+}
+
 /* The new-row flash, ported from the SDK's demo viewer
    (typescript-sdk/examples/demo-site/viewer.html:53-54). On a quiet feed it is
    the only sign that polling is still alive. */
