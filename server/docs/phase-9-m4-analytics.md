@@ -60,14 +60,44 @@ shadcn tokens in both light and dark.
 
 ---
 
-## Decisions for you
+## Decisions taken
 
-- **Default range.** 7d is the usual choice. Does it persist per project, and where —
-  URL search params (shareable, survives refresh) or localStorage?
-- **Deltas on the KPI cards?** "+12% vs previous period" needs a second `/v1/stats` call
-  over the shifted range. Cheap, but it doubles the requests per page load.
-- **Timezone display.** The buckets are UTC. Do you label them UTC explicitly, or convert
-  for display and accept that a "day" boundary won't match the user's?
+- **Range lives in the URL** (`?range=7d`), defaulting to 7d. It is addressable state —
+  two people looking at "the last 30 days" should be able to send each other the link —
+  and it keeps the page a plain server read with no client cache to invalidate. An
+  unrecognised value falls back to the default rather than erroring.
+- **Deltas, from a second `/v1/stats` over the shifted window.** Both calls run in
+  parallel server-side, so the reader waits no longer; it costs the API a second query
+  per page view. A bare total answers "how many" but never "is that good".
+  Growth from zero reports "no previous period to compare" rather than "+100%", which
+  would be a number the data does not contain.
+- **Buckets are labelled UTC and left in UTC.** Converting for display would put a
+  reader's "day" boundary somewhere in the middle of a bar the server had already
+  decided. The events table does the same.
+- **Only one chart.** Three headline numbers are stat tiles, not a grouped bar chart;
+  ten labelled selectors are a table, not ten colours. Events-over-time is the only
+  thing here whose job is a shape.
+
+---
+
+## Chart notes
+
+Written against the `dataviz` skill's procedure — form first, colour last, then look at
+the rendered result.
+
+- **Single series, so no legend.** The heading names what is plotted; a box with one
+  swatch restates it.
+- **The palette is validated, not eyeballed.** The shadcn `nova` preset ships
+  `--chart-1..5` as greys (`oklch(… 0 0)`, chroma 0) and identical in both modes — a
+  zero-chroma "hue" reads as grey and an unchanged dark value is an automatic flip
+  rather than a step chosen for the dark surface. `--chart-series-1` is the validated
+  sequential blue, stepped per mode and checked against the card surface in each
+  (lightness band, chroma floor, ≥ 3:1 contrast; both PASS).
+- **Linear interpolation, not a spline.** These are discrete UTC-day buckets, and a
+  smoothed curve draws values between them that the data does not have.
+- **One direct label: the peak.** A value on every point is noise; the axis and the
+  tooltip carry the rest. Crosshair and tooltip ship by default, and a "view as a table"
+  disclosure means no value is reachable only by hovering.
 
 ---
 

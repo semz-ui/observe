@@ -48,11 +48,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
   {
     label: 'Overview',
-    href: () => null,
+    href: (projectId) => (projectId === null ? null : `/projects/${projectId}`),
     icon: BarChart3,
     milestone: 'M4',
-    available: false,
+    available: true,
     requiresProject: true,
-    matchesDescendants: true,
+    // `/projects/<id>` is a prefix of every project-scoped route, so matching
+    // descendants here would light Overview up alongside Events.
+    matchesDescendants: false,
   },
 ];
