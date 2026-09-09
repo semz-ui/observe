@@ -41,17 +41,33 @@ thing they can't get back.
 
 ---
 
-## Decisions for you
+## Decisions taken
 
-- **Server Action, or Route Handler + TanStack mutation?** Actions are more idiomatic in
-  App Router and skip a hop; a Route Handler keeps the data layer uniform with M3 and
-  keeps the mutation testable the same way the queries are. Either is defensible — pick
-  one and document it in the overview.
-- **Where the install snippet comes from** — copied from the SDK README, or generated in
-  the UI from the new key? Generating it means the snippet is correct and pasteable, but
-  it's a second place that has to track the SDK's API.
-- **What happens right after creation** — route into the new project's (empty) events
-  page, or stay on the list?
+- **A Server Action, not a route handler.** The form posts straight to the server, which
+  calls the API and `revalidatePath('/projects')`. There is no client cache holding
+  projects — the list is a server read — so there is nothing to invalidate by hand, and
+  no second network hop.
+- **The install snippet is generated from the new key**, so what the reader pastes is
+  already correct rather than a README template with a placeholder in it. `apiHost` comes
+  from `OBSERVE_API_URL`; in a real deployment the browser-facing ingestion host may
+  differ from the dashboard's internal one, and that day this needs its own public env
+  var rather than borrowing this one.
+- **After "I've copied it", route into the new project's events feed.** Its empty state
+  says to install the SDK and click something, which is exactly the next step.
+
+---
+
+## Two traps this milestone hit
+
+- **A `'use server'` file may export only async functions.** Exporting the initial state
+  object beside the action throws at module evaluation — and `tsc`, `eslint` and
+  `next build` all pass it. It only surfaces when the page is opened. The state type and
+  its initial value live in their own module now.
+- **`tailwind-merge` replaces a class only within the same variant.** The dialog
+  primitive sets `sm:max-w-sm`; an unprefixed `max-w-xl` does not beat it above the
+  breakpoint, so the panel stayed narrow while the key and snippet overflowed it. The
+  override has to be `sm:max-w-2xl`, and the flex children need `min-w-0` so an
+  unbreakable snippet scrolls inside the panel instead of widening it.
 
 ---
 

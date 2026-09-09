@@ -1,7 +1,12 @@
 import 'server-only';
 
-import { apiGet } from '@/shared/api/http';
-import { projectListSchema, type ProjectSummary } from '../domain/project';
+import { apiGet, apiPost } from '@/shared/api/http';
+import {
+  createdProjectSchema,
+  projectListSchema,
+  type CreatedProject,
+  type ProjectSummary,
+} from '../domain/project';
 
 export function listProjects(): Promise<ProjectSummary[]> {
   return apiGet('/api/projects', projectListSchema);
@@ -18,4 +23,9 @@ export async function findProject(
 ): Promise<ProjectSummary | null> {
   const projects = await listProjects();
   return projects.find((project) => project.id === projectId) ?? null;
+}
+
+/** The one call that returns a plaintext key. See `createdProjectSchema`. */
+export function createProject(name: string): Promise<CreatedProject> {
+  return apiPost('/api/projects', createdProjectSchema, { name });
 }
