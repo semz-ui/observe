@@ -20,7 +20,7 @@ function installSnippet(apiKey: string): string {
   const apiHost = process.env.OBSERVE_API_URL ?? 'https://your-observe-host';
 
   return [
-    '<script src="https://unpkg.com/@observe/sdk/dist/observe.global.js"></script>',
+    '<script src="https://unpkg.com/@semz-ui/observe-sdk/dist/index.global.js"></script>',
     '<script>',
     `  Observe.init({ apiKey: '${apiKey}', apiHost: '${apiHost}' });`,
     '</script>',
