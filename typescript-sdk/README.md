@@ -1,4 +1,4 @@
-# @observe/sdk
+# @semz-ui/observe-sdk
 
 The browser tracker for **observe** — drop it on a page and every click is
 captured, batched, and posted to the ingestion API.
@@ -11,7 +11,7 @@ Not published to npm yet (Phase 10); today it is built locally and loaded from
 Script tag (the IIFE build attaches `window.Observe`):
 
 ```html
-<script src="/path/to/observe.global.js"></script>
+<script src="/path/to/index.global.js"></script>
 <script>
   Observe.init({ apiKey: 'obs_…', apiHost: 'https://api.example.com' });
 </script>
@@ -20,7 +20,7 @@ Script tag (the IIFE build attaches `window.Observe`):
 Bundler (ESM/CJS both ship):
 
 ```ts
-import { init } from '@observe/sdk';
+import { init } from '@semz-ui/observe-sdk';
 
 init({ apiKey: 'obs_…', apiHost: 'https://api.example.com' });
 ```

@@ -129,7 +129,7 @@ preflight from an arbitrary origin returns `access-control-allow-origin: *`)
 
 **Goal:** the installable tracker — the product's front door.
 
-- [x] Standalone `typescript-sdk/` package (`@observe/sdk`) with its own pnpm
+- [x] Standalone `typescript-sdk/` package (`@semz-ui/observe-sdk`) with its own pnpm
       lockfile — *not* a workspace shared with `server/`: the SDK ships onto
       other people's sites and gains nothing from the API's dependency tree
 - [x] `init({ apiKey, apiHost, flushInterval?, batchSize?, sessionTimeout? })` —
