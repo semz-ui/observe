@@ -33,6 +33,9 @@
     "demo": "pnpm build && python3 -m http.server 4173",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "jsdom": "^30.0.1",
     "tsup": "^8.3.5",
