@@ -1,17 +1,22 @@
 {
-  "name": "@observe/sdk",
-  "version": "0.0.0",
+  "name": "@semz-ui/observe-sdk",
+  "version": "0.1.0",
   "description": "Click autocapture SDK for the observe analytics platform",
-  "private": true,
+  "private": false,
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "unpkg": "./dist/index.global.js",
@@ -25,7 +30,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "demo": "pnpm build && python3 -m http.server 4173"
+    "demo": "pnpm build && python3 -m http.server 4173",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "jsdom": "^30.0.1",

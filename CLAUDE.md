@@ -15,7 +15,7 @@ This is a **learning project**: Michael writes the code himself; Claude explains
 "observe" — a simple Amplitude-style product-analytics platform, all TypeScript:
 
 - `server/` — NestJS API
-- `typescript-sdk/` — `@observe/sdk`, the script websites install to auto-capture
+- `typescript-sdk/` — `@semz-ui/observe-sdk`, the script websites install to auto-capture
   clicks. Standalone package with its own pnpm lockfile, **not** a workspace with
   `server/` (see its README)
 - `dashboard/` (planned) — Next.js (App Router) + shadcn/ui + TanStack Query +
