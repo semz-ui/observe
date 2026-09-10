@@ -3,9 +3,6 @@
 The browser tracker for **observe** — drop it on a page and every click is
 captured, batched, and posted to the ingestion API.
 
-Not published to npm yet (Phase 10); today it is built locally and loaded from
-`dist/`.
-
 ## Usage
 
 Script tag (the IIFE build attaches `window.Observe`):
